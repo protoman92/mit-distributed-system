@@ -6,12 +6,10 @@ import (
 	"os"
 	"path"
 
-	sp "github.com/protoman92/mit-distributed-system-6.824/src/mapreduce/splitter"
-
-	rw "github.com/protoman92/mit-distributed-system-6.824/src/mapreduce/readWriter"
-
-	exc "github.com/protoman92/mit-distributed-system-6.824/src/mapreduce/executor"
-	orc "github.com/protoman92/mit-distributed-system-6.824/src/mapreduce/orchestrator"
+	exc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
+	orc "github.com/protoman92/mit-distributed-system/src/mapreduce/orchestrator"
+	rw "github.com/protoman92/mit-distributed-system/src/mapreduce/readWriter"
+	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter"
 )
 
 // our simplified version of MapReduce does not supply a

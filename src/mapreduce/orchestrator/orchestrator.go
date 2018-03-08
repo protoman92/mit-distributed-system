@@ -1,9 +1,9 @@
 package orchestrator
 
 import (
-	exc "github.com/protoman92/mit-distributed-system-6.824/src/mapreduce/executor"
-	rw "github.com/protoman92/mit-distributed-system-6.824/src/mapreduce/readWriter"
-	sp "github.com/protoman92/mit-distributed-system-6.824/src/mapreduce/splitter"
+	exc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
+	rw "github.com/protoman92/mit-distributed-system/src/mapreduce/readWriter"
+	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter"
 )
 
 // Orchestrator represents a MapReduce process orchestrator. When initialized,
