@@ -1,10 +1,11 @@
 package executor
 
+import (
+	"fmt"
+)
+
 // Executor represents a MapReduce executor.
 type Executor interface {
-	DoneInputChannel() chan<- interface{}
-	DonePendingSplitChannel() <-chan interface{}
-	InputPendingSplitChannel() <-chan []byte
 	InputReceiptChannel() chan<- []byte
 	DoneChannel() <-chan interface{}
 }
@@ -14,21 +15,8 @@ type Params struct{}
 
 type executor struct {
 	*Params
-	doneCh      chan interface{}
-	doneInputCh chan interface{}
-	inputCh     chan []byte
-}
-
-func (e *executor) DoneInputChannel() chan<- interface{} {
-	return e.doneInputCh
-}
-
-func (e *executor) DonePendingSplitChannel() <-chan interface{} {
-	return e.doneInputCh
-}
-
-func (e *executor) InputPendingSplitChannel() <-chan []byte {
-	return e.inputCh
+	doneCh  chan interface{}
+	inputCh chan []byte
 }
 
 func (e *executor) InputReceiptChannel() chan<- []byte {
@@ -39,15 +27,24 @@ func (e *executor) DoneChannel() <-chan interface{} {
 	return e.doneCh
 }
 
+func (e *executor) loopWork() {
+	for {
+		select {
+		case input := <-e.inputCh:
+			fmt.Println(string(input))
+		}
+	}
+}
+
 // NewExecutor returns a new Executor.
 func NewExecutor(params Params) Executor {
 	executor := &executor{
-		Params:      &params,
-		doneCh:      make(chan interface{}, 1),
-		doneInputCh: make(chan interface{}, 1),
-		inputCh:     make(chan []byte, 1),
+		Params:  &params,
+		doneCh:  make(chan interface{}, 1),
+		inputCh: make(chan []byte, 1),
 	}
 
+	go executor.loopWork()
 	return executor
 }
 

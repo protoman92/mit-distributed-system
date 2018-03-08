@@ -28,6 +28,10 @@ func (ss *stringSplitter) InputReceiptChannel() chan<- []byte {
 	return ss.inputCh
 }
 
+func (ss *stringSplitter) SeparatorToken() byte {
+	return ss.SplitToken
+}
+
 func (ss *stringSplitter) SplitResultChannel() <-chan <-chan []byte {
 	return ss.splitCh
 }

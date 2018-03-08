@@ -5,6 +5,11 @@ package splitter
 type Splitter interface {
 	DoneReceiptChannel() chan<- interface{}
 	InputReceiptChannel() chan<- []byte
-	SplitResultChannel() <-chan <-chan []byte
 	TotalSizeReceiptChannel() chan<- uint64
+	SeparatorToken() byte
+
+	// This is a channel of channels because each split portions may be too large
+	// to transmit all at once. Instead, we may split the delivery of each even
+	// further to minimize size.
+	SplitResultChannel() <-chan <-chan []byte
 }
