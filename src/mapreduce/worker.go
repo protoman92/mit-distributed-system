@@ -2,11 +2,12 @@ package mapreduce
 
 import (
 	"container/list"
-	"fmt"
 	"log"
 	"net"
 	"net/rpc"
 	"os"
+
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/util"
 )
 
 // Worker is a server waiting for DoJob or Shutdown RPCs
@@ -20,37 +21,26 @@ type Worker struct {
 }
 
 // The master sent us a job
-func (wk *Worker) DoJob(arg *DoJobArgs, res *DoJobReply) error {
+func (wk *Worker) DoJob(arg *util.DoJobArgs, res *util.DoJobReply) error {
 	switch arg.Operation {
-	case Map:
+	case util.Map:
 		DoMap(arg.JobNumber, arg.File, arg.NumOtherPhase, wk.Map)
-	case Reduce:
+	case util.Reduce:
 		DoReduce(arg.JobNumber, arg.File, arg.NumOtherPhase, wk.Reduce)
 	}
 	res.OK = true
 	return nil
 }
 
-// The master is telling us to shutdown. Report the number of Jobs we
-// have processed.
-func (wk *Worker) Shutdown(args *ShutdownArgs, res *ShutdownReply) error {
-	res.Njobs = wk.nJobs
-	res.OK = true
-	wk.nRPC = 1 // OK, because the same thread reads nRPC
-	wk.nJobs--  // Don't count the shutdown RPC
-	return nil
-}
-
-// Tell the master we exist and ready to work
-func Register(master string, me string) {
-	args := &RegisterArgs{}
-	args.Worker = me
-	var reply RegisterReply
-	ok := call(master, "MapReduce.Register", args, &reply)
-	if ok == false {
-		fmt.Printf("Register: RPC %s register error\n", master)
-	}
-}
+// // The master is telling us to shutdown. Report the number of Jobs we
+// // have processed.
+// func (wk *Worker) Shutdown(args *ShutdownArgs, res *ShutdownReply) error {
+// 	res.Njobs = wk.nJobs
+// 	res.OK = true
+// 	wk.nRPC = 1 // OK, because the same thread reads nRPC
+// 	wk.nJobs--  // Don't count the shutdown RPC
+// 	return nil
+// }
 
 // Set up a connection with the master, register with the master,
 // and wait for jobs from the master
@@ -70,7 +60,6 @@ func RunWorker(MasterAddress string, me string,
 		log.Fatal("RunWorker: worker ", me, " error: ", e)
 	}
 	wk.l = l
-	Register(MasterAddress, me)
 
 	// DON'T MODIFY CODE BELOW
 	for wk.nRPC != 0 {

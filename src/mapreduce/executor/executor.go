@@ -1,9 +1,11 @@
 package executor
 
+import "github.com/protoman92/mit-distributed-system/src/mapreduce/util"
+
 // Executor represents a MapReduce executor.
 type Executor interface {
 	ErrorChannel() <-chan error
-	InputReceiptChannel() chan<- []byte
+	InputReceiptChannel() chan<- *util.KeyValue
 	DoneChannel() <-chan interface{}
 }
 

@@ -7,12 +7,13 @@ import (
 	"path"
 	"strconv"
 
-	erpc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor/rpc"
-	ir "github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader"
-	orc "github.com/protoman92/mit-distributed-system/src/mapreduce/orchestrator"
-	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter"
-	wrpc "github.com/protoman92/mit-distributed-system/src/mapreduce/worker/rpc"
 	"github.com/protoman92/mit-distributed-system/src/util"
+
+	erpc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor/rpc"
+	ir "github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader/local"
+	lorc "github.com/protoman92/mit-distributed-system/src/mapreduce/orchestrator/local"
+	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter/string"
+	wrpc "github.com/protoman92/mit-distributed-system/src/mapreduce/worker/rpc"
 )
 
 // our simplified version of MapReduce does not supply a
@@ -33,15 +34,25 @@ func Reduce(key string, values *list.List) string {
 // 2) Master (e.g., go run wc.go master x.txt localhost:7777)
 // 3) Worker (e.g., go run wc.go worker localhost:7777 localhost:7778 &)
 func main() {
-	filename := "kjv12.txt"
+	fileNames := []string{
+		// "kjv12.txt",
+		"randomtext.txt",
+	}
+
 	wd, err := os.Getwd()
 
 	if err != nil {
 		panic(err)
 	}
 
+	filePaths := make([]string, 0)
 	dir, _ := path.Split(wd)
-	fileDir := path.Join(dir, "kjv12")
+	fileDir := path.Join(dir, "textinput")
+
+	for ix := range fileNames {
+		filePaths = append(filePaths, path.Join(fileDir, fileNames[ix]))
+	}
+
 	masterAddress := "master"
 	network := "unix"
 
@@ -50,18 +61,19 @@ func main() {
 
 	logman := util.NewLogMan(util.LogManParams{Log: true})
 
-	oParams := orc.LocalParams{
+	oParams := lorc.Params{
 		ExecutorParams: erpc.Params{
-			Address:           masterAddress,
-			LogMan:            logman,
-			Network:           network,
-			WorkerDoJobMethod: "WkDelegate.DoWork",
+			Address:              masterAddress,
+			LogMan:               logman,
+			Network:              network,
+			WorkerDoJobMethod:    "WkDelegate.DoWork",
+			WorkerShutdownMethod: "WkDelegate.Shutdown",
 		},
-		InputReaderParams: ir.LocalParams{FileName: filename, FileDir: fileDir},
-		SplitterParams:    sp.StringParams{ChunkCount: 5, SplitToken: '\n'},
+		InputReaderParams: ir.Params{FilePaths: filePaths},
+		SplitterParams:    sp.Params{ChunkCount: 5, SplitToken: '\n'},
 	}
 
-	orchestrator := orc.NewLocalOrchestrator(oParams)
+	orchestrator := lorc.NewLocalOrchestrator(oParams)
 	workerCount := 5
 
 	for i := 0; i < workerCount; i++ {
