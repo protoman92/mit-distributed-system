@@ -1,19 +1,24 @@
 package executor
 
 import (
-	"fmt"
 	"net"
 	"net/rpc"
 	"sync"
 
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/rpcutil"
+	"github.com/protoman92/mit-distributed-system/src/util"
+
 	exc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
+	erpc "github.com/protoman92/mit-distributed-system/src/mapreduce/worker/rpc"
 )
 
 // Params represents the required parameters to build a Master. Consult the net
 // package (esp. net.Listen) for available parameters.
 type Params struct {
-	Address string
-	Network string
+	Address           string
+	LogMan            util.LogMan
+	Network           string
+	WorkerDoJobMethod string
 }
 
 // This is a master that communicates with workers via RPC.
@@ -26,6 +31,7 @@ type executor struct {
 	errCh              chan error
 	inputCh            chan []byte
 	inputShutdownCh    chan interface{}
+	jobErrCh           chan error
 	registerShutdownCh chan interface{}
 	shutdownCh         chan interface{}
 	workerCh           chan string
@@ -49,18 +55,6 @@ func (e *executor) setListener(listener net.Listener) {
 	e.listener = listener
 }
 
-func (e *executor) loopReceiveInput() {
-	for {
-		select {
-		case input := <-e.inputCh:
-			fmt.Println(string(input))
-
-		case <-e.inputShutdownCh:
-			return
-		}
-	}
-}
-
 func (e *executor) loopRegistration() {
 	rpcs := rpc.NewServer()
 	rpcs.Register(e.delegate)
@@ -82,6 +76,8 @@ func (e *executor) loopRegistration() {
 				return
 
 			default:
+				// When a RPC call is received, we serve the delegate's methods. The
+				// delegate then relays back the necessary information to the master.
 				if conn, err := listener.Accept(); err == nil {
 					go func() {
 						defer conn.Close()
@@ -101,6 +97,55 @@ func (e *executor) loopShutdown() {
 	e.shutdown()
 }
 
+func (e *executor) loopInputAndWorker() {
+	inputCh := e.inputCh
+	resetCh := make(chan interface{}, 1)
+	var input []byte
+	var workerCh chan string
+
+	for {
+		select {
+		case input = <-inputCh:
+			inputCh = nil
+			workerCh = e.workerCh
+
+		case worker := <-workerCh:
+			workerCh = nil
+			params := &DistributeParams{Data: input, WorkerAddress: worker}
+
+			if err := e.distributeWork(params); err != nil {
+				e.LogMan.Printf("Received job error: %v\n", err)
+			}
+
+			resetCh <- true
+
+		// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+		case <-resetCh:
+			inputCh = e.inputCh
+
+		case <-e.inputShutdownCh:
+			return
+		}
+	}
+}
+
+// This call blocks, so we will need a timeout channel when we distribute jobs
+// so that the master knows when to assign the work to another worker.
+func (e *executor) distributeWork(params *DistributeParams) error {
+	jobParams := &erpc.JobParams{Data: params.Data}
+	jobReply := &erpc.JobReply{}
+
+	cParams := &rpcutil.CallParams{
+		Args:    jobParams,
+		Method:  e.WorkerDoJobMethod,
+		Network: e.Network,
+		Reply:   jobReply,
+		Target:  params.WorkerAddress,
+	}
+
+	return rpcutil.Call(cParams)
+}
+
 func (e *executor) shutdown() {
 	e.inputShutdownCh <- true
 	e.registerShutdownCh <- true
@@ -116,8 +161,9 @@ func NewRPCMasterExecutor(params Params) exc.Executor {
 
 	master := &executor{
 		Params:             &params,
-		inputShutdownCh:    make(chan interface{}, 1),
-		registerShutdownCh: make(chan interface{}, 1),
+		inputCh:            make(chan []byte, 0),
+		inputShutdownCh:    make(chan interface{}, 0),
+		registerShutdownCh: make(chan interface{}, 0),
 		shutdownCh:         shutdownCh,
 		workerCh:           workerCh,
 		delegate: &ExcDelegate{
@@ -126,8 +172,8 @@ func NewRPCMasterExecutor(params Params) exc.Executor {
 		},
 	}
 
-	go master.loopReceiveInput()
 	go master.loopRegistration()
 	go master.loopShutdown()
+	go master.loopInputAndWorker()
 	return master
 }

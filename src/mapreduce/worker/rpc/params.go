@@ -7,3 +7,11 @@ type RegisterParams struct {
 
 // RegisterReply represents the reply to a registration request.
 type RegisterReply struct{}
+
+// JobParams represents the required parameters to perform a job.
+type JobParams struct {
+	Data []byte
+}
+
+// JobReply represents the reply to a job request.
+type JobReply struct{}

@@ -12,6 +12,7 @@ import (
 	orc "github.com/protoman92/mit-distributed-system/src/mapreduce/orchestrator"
 	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter"
 	wrpc "github.com/protoman92/mit-distributed-system/src/mapreduce/worker/rpc"
+	"github.com/protoman92/mit-distributed-system/src/util"
 )
 
 // our simplified version of MapReduce does not supply a
@@ -47,10 +48,14 @@ func main() {
 	// Only applicable for "unix".
 	os.Remove(masterAddress)
 
+	logman := util.NewLogMan(util.LogManParams{Log: true})
+
 	oParams := orc.LocalParams{
 		ExecutorParams: erpc.Params{
-			Address: masterAddress,
-			Network: network,
+			Address:           masterAddress,
+			LogMan:            logman,
+			Network:           network,
+			WorkerDoJobMethod: "WkDelegate.DoWork",
 		},
 		InputReaderParams: ir.LocalParams{FileName: filename, FileDir: fileDir},
 		SplitterParams:    sp.StringParams{ChunkCount: 5, SplitToken: '\n'},

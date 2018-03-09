@@ -36,6 +36,19 @@ func (w *servant) loopRegistration() {
 
 	w.setListener(listener)
 	w.registerWithMaster()
+
+	go func() {
+		for {
+			// Here we expose the worker delegate's methods via RPC so that the master
+			// can hand over jobs for said worker to perform.
+			if conn, err := listener.Accept(); err == nil {
+				defer conn.Close()
+				rpcs.ServeConn(conn)
+			} else {
+				panic(err)
+			}
+		}
+	}()
 }
 
 func (w *servant) registerWithMaster() {
