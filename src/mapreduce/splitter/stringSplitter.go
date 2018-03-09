@@ -3,7 +3,6 @@ package splitter
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 )
 
 // StringParams represents the required parameters to build a StringSplitter.
@@ -43,7 +42,6 @@ func (ss *stringSplitter) TotalSizeReceiptChannel() chan<- uint64 {
 func (ss *stringSplitter) loopWork() {
 	totalSize := <-ss.sizeCh
 	chunkSize := (totalSize / uint64(ss.ChunkCount)) + 1
-	fmt.Println(totalSize, chunkSize)
 	token := ss.SplitToken
 	outCh := make(chan []byte, 0)
 	ss.splitCh <- outCh

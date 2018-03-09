@@ -2,7 +2,7 @@ package orchestrator
 
 import (
 	exc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
-	rw "github.com/protoman92/mit-distributed-system/src/mapreduce/readWriter"
+	ir "github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader"
 	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter"
 )
 
@@ -17,9 +17,9 @@ type Orchestrator interface {
 
 // Params represents the required parameters to build an Orchestrator.
 type Params struct {
-	Executor   exc.Executor
-	ReadWriter rw.ReadWriter
-	Splitter   sp.Splitter
+	Executor    exc.Executor
+	InputReader ir.InputReader
+	Splitter    sp.Splitter
 }
 
 type orchestrator struct {
@@ -37,7 +37,7 @@ func (o *orchestrator) ErrorChannel() <-chan error {
 
 func (o *orchestrator) loopReadInput() {
 	resetCh := make(chan interface{}, 1)
-	rwInputCh := o.ReadWriter.ReadInputChannel()
+	rwInputCh := o.InputReader.ReadInputChannel()
 	var input []byte
 	var splitterInputCh chan<- []byte
 
@@ -53,7 +53,7 @@ func (o *orchestrator) loopReadInput() {
 			resetCh <- true
 
 		case <-resetCh:
-			rwInputCh = o.ReadWriter.ReadInputChannel()
+			rwInputCh = o.InputReader.ReadInputChannel()
 		}
 	}
 }
@@ -67,7 +67,7 @@ func (o *orchestrator) loopTransmitInputSize() {
 
 	for {
 		select {
-		case size = <-o.ReadWriter.TotalSizeChannel():
+		case size = <-o.InputReader.TotalSizeChannel():
 			receiveCh = o.Splitter.TotalSizeReceiptChannel()
 
 		case receiveCh <- size:
@@ -111,7 +111,7 @@ func (o *orchestrator) loopReceiveSplitResult() {
 }
 
 func (o *orchestrator) loopDoneInput() {
-	rwDoneInputCh := o.ReadWriter.DoneInputChannel()
+	rwDoneInputCh := o.InputReader.DoneInputChannel()
 	resetCh := make(chan interface{}, 1)
 	var splitDoneReceiptCh chan<- interface{}
 
@@ -126,7 +126,7 @@ func (o *orchestrator) loopDoneInput() {
 			resetCh <- true
 
 		case <-resetCh:
-			rwDoneInputCh = o.ReadWriter.DoneInputChannel()
+			rwDoneInputCh = o.InputReader.DoneInputChannel()
 		}
 	}
 }
@@ -134,7 +134,10 @@ func (o *orchestrator) loopDoneInput() {
 func (o *orchestrator) loopError() {
 	for {
 		select {
-		case err := <-o.ReadWriter.ErrorChannel():
+		case err := <-o.Executor.ErrorChannel():
+			o.errCh <- err
+
+		case err := <-o.InputReader.ErrorChannel():
 			o.errCh <- err
 		}
 	}

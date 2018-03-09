@@ -28,11 +28,6 @@ type DoJobReply struct {
 type ShutdownArgs struct {
 }
 
-type ShutdownReply struct {
-	Njobs int
-	OK    bool
-}
-
 type RegisterArgs struct {
 	Worker string
 }

@@ -1,24 +1,24 @@
 package orchestrator
 
 import (
-	exc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
-	rw "github.com/protoman92/mit-distributed-system/src/mapreduce/readWriter"
+	erpc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor/rpc"
+	ir "github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader"
 	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter"
 )
 
 // LocalParams represents the requires parameters to build a local orchestrator.
 type LocalParams struct {
-	ExecutorParams   exc.Params
-	ReadWriterParams rw.LocalParams
-	SplitterParams   sp.StringParams
+	ExecutorParams    erpc.Params
+	InputReaderParams ir.LocalParams
+	SplitterParams    sp.StringParams
 }
 
 // NewLocalOrchestrator returns a new local Orchestrator.
 func NewLocalOrchestrator(params LocalParams) Orchestrator {
 	oParams := &Params{
-		Executor:   exc.NewExecutor(params.ExecutorParams),
-		ReadWriter: rw.NewLocalReadWriter(params.ReadWriterParams),
-		Splitter:   sp.NewStringSplitter(params.SplitterParams),
+		Executor:    erpc.NewRPCMasterExecutor(params.ExecutorParams),
+		InputReader: ir.NewLocalInputReader(params.InputReaderParams),
+		Splitter:    sp.NewStringSplitter(params.SplitterParams),
 	}
 
 	return NewOrchestrator(oParams)

@@ -1,51 +1,10 @@
 package executor
 
-import (
-	"fmt"
-)
-
 // Executor represents a MapReduce executor.
 type Executor interface {
+	ErrorChannel() <-chan error
 	InputReceiptChannel() chan<- []byte
 	DoneChannel() <-chan interface{}
-}
-
-// Params represents the necessary parameters to build a Executor.
-type Params struct{}
-
-type executor struct {
-	*Params
-	doneCh  chan interface{}
-	inputCh chan []byte
-}
-
-func (e *executor) InputReceiptChannel() chan<- []byte {
-	return e.inputCh
-}
-
-func (e *executor) DoneChannel() <-chan interface{} {
-	return e.doneCh
-}
-
-func (e *executor) loopWork() {
-	for {
-		select {
-		case input := <-e.inputCh:
-			fmt.Println(string(input))
-		}
-	}
-}
-
-// NewExecutor returns a new Executor.
-func NewExecutor(params Params) Executor {
-	executor := &executor{
-		Params:  &params,
-		doneCh:  make(chan interface{}, 1),
-		inputCh: make(chan []byte, 1),
-	}
-
-	go executor.loopWork()
-	return executor
 }
 
 // // import "os/exec"
@@ -79,12 +38,6 @@ func NewExecutor(params Params) Executor {
 // 	}
 
 // 	return
-// }
-
-// // KeyValue represents a tuple of key-value.
-// type KeyValue struct {
-// 	Key   string
-// 	Value string
 // }
 
 // // MapReduce represents a MapReduce process.
@@ -127,12 +80,6 @@ func NewExecutor(params Params) Executor {
 // // 	return mr
 // // }
 
-// func hash(s string) uint32 {
-// 	h := fnv.New32a()
-// 	h.Write([]byte(s))
-// 	return h.Sum32()
-// }
-
 // // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> MapReduce methods.
 // // Register registers a Worker.
 // func (mr *mapReduce) Register(args *RegisterArgs, res *RegisterReply) error {
@@ -152,40 +99,6 @@ func NewExecutor(params Params) Executor {
 // 	mr.alive = false
 // 	mr.l.Close() // causes the Accept to fail
 // 	return nil
-// }
-
-// // StartRegistrationServer starts the registration server that accepts workers.
-// func (mr *mapReduce) StartRegistrationServer() {
-// 	rpcs := rpc.NewServer()
-// 	rpcs.Register(mr)
-// 	os.Remove(mr.MasterAddress) // only needed for "unix"
-// 	l, e := net.Listen("unix", mr.MasterAddress)
-
-// 	if e != nil {
-// 		log.Fatal("RegstrationServer", mr.MasterAddress, " error: ", e)
-// 	}
-
-// 	mr.l = l
-
-// 	// now that we are listening on the master address, can fork off accepting
-// 	// connections to another thread.
-// 	go func() {
-// 		for mr.alive {
-// 			conn, err := mr.l.Accept()
-
-// 			if err == nil {
-// 				go func() {
-// 					rpcs.ServeConn(conn)
-// 					conn.Close()
-// 				}()
-// 			} else {
-// 				DPrintf("RegistrationServer: accept error", err)
-// 				break
-// 			}
-// 		}
-
-// 		DPrintf("RegistrationServer: done\n")
-// 	}()
 // }
 
 // // Split splits bytes of input file into nMap splits, but only on white space.

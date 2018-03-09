@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 
-	exc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
+	erpc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor/rpc"
+	ir "github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader"
 	orc "github.com/protoman92/mit-distributed-system/src/mapreduce/orchestrator"
-	rw "github.com/protoman92/mit-distributed-system/src/mapreduce/readWriter"
 	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter"
+	wrpc "github.com/protoman92/mit-distributed-system/src/mapreduce/worker/rpc"
 )
 
 // our simplified version of MapReduce does not supply a
@@ -39,14 +41,40 @@ func main() {
 
 	dir, _ := path.Split(wd)
 	fileDir := path.Join(dir, "kjv12")
+	masterAddress := "master"
+	network := "unix"
 
-	params := orc.LocalParams{
-		ExecutorParams:   exc.Params{},
-		ReadWriterParams: rw.LocalParams{FileName: filename, FileDir: fileDir},
-		SplitterParams:   sp.StringParams{ChunkCount: 5, SplitToken: '\n'},
+	// Only applicable for "unix".
+	os.Remove(masterAddress)
+
+	oParams := orc.LocalParams{
+		ExecutorParams: erpc.Params{
+			Address: masterAddress,
+			Network: network,
+		},
+		InputReaderParams: ir.LocalParams{FileName: filename, FileDir: fileDir},
+		SplitterParams:    sp.StringParams{ChunkCount: 5, SplitToken: '\n'},
 	}
 
-	orchestrator := orc.NewLocalOrchestrator(params)
+	orchestrator := orc.NewLocalOrchestrator(oParams)
+	workerCount := 5
+
+	for i := 0; i < workerCount; i++ {
+		address := "Worker-" + strconv.Itoa(i)
+
+		// Only applicable for "unix".
+		os.Remove(address)
+
+		wkParams := wrpc.Params{
+			Address:              address,
+			MasterAddress:        masterAddress,
+			MasterRegisterMethod: "ExcDelegate.Register",
+			Network:              network,
+		}
+
+		wrpc.NewRPCWorker(wkParams)
+	}
+
 	doneCh := make(chan interface{}, 1)
 
 	go func() {
