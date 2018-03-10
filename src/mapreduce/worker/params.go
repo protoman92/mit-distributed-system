@@ -3,7 +3,7 @@ package worker
 import (
 	"fmt"
 
-	"github.com/protoman92/mit-distributed-system/src/mapreduce/util"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 )
 
 // RegisterParams represents the required parameters to register a worker.
@@ -19,7 +19,7 @@ type JobParams struct {
 	Data      []byte
 	Key       string
 	JobNumber uint
-	JobType   util.JobType
+	JobType   mrutil.JobType
 }
 
 func (p *JobParams) String() string {
@@ -50,4 +50,12 @@ type jobRequest struct {
 
 func (r *jobRequest) String() string {
 	return r.details.String()
+}
+
+func (r *jobRequest) DataChunk() *mrutil.DataChunk {
+	return &mrutil.DataChunk{
+		Key:    r.details.Key,
+		Value:  r.details.Data,
+		NChunk: r.details.JobNumber,
+	}
 }

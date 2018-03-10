@@ -1,4 +1,4 @@
-package util
+package mrutil
 
 import (
 	"fmt"
@@ -16,20 +16,20 @@ const (
 // the type, a worker may perform different tasks.
 type JobType string
 
-// KeyValueChunk represents chunk of contents for a certain key.
-type KeyValueChunk struct {
+// DataChunk represents chunk of contents for a certain key.
+type DataChunk struct {
 	Key    string
 	Value  []byte
-	NChunk int
+	NChunk uint
 }
 
-func (kv *KeyValueChunk) String() string {
-	return fmt.Sprintf("Key %s, chunk %d, value count %d", kv.Key, kv.NChunk, len(kv.Value))
+func (dc *DataChunk) String() string {
+	return fmt.Sprintf("Key %s, chunk %d, value count %d", dc.Key, dc.NChunk, len(dc.Value))
 }
 
 // ValueString returns the string representation of the value.
-func (kv *KeyValueChunk) ValueString() string {
-	return string(kv.Value)
+func (dc *DataChunk) ValueString() string {
+	return string(dc.Value)
 }
 
 // RPC arguments and replies.  Field names must start with capital letters,

@@ -1,14 +1,12 @@
 package orchestrator
 
-import (
-	"github.com/protoman92/mit-distributed-system/src/mapreduce/util"
-)
+import "github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 
 func (o *orchestrator) loopReadInput() {
 	readInputCh := o.InputReader.ReadInputChannel()
 	resetCh := make(chan interface{}, 1)
-	var excInputCh chan<- *util.KeyValueChunk
-	var keyValue *util.KeyValueChunk
+	var excInputCh chan<- *mrutil.DataChunk
+	var keyValue *mrutil.DataChunk
 
 	for {
 		select {

@@ -1,20 +1,19 @@
-package local
+package localReader
 
 import (
 	"bufio"
 	"os"
 	"strings"
 
-	"github.com/protoman92/mit-distributed-system/src/mapreduce/util"
-
-	ir "github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 )
 
 func (lr *localInputReader) readFileAtPath(path string) {
 	file, err := os.Open(path)
 
 	if err != nil {
-		lr.errCh <- &ir.Error{Original: err}
+		lr.errCh <- &inputReader.Error{Original: err}
 		return
 	}
 
@@ -22,7 +21,7 @@ func (lr *localInputReader) readFileAtPath(path string) {
 	fInfo, err := file.Stat()
 
 	if err != nil {
-		lr.errCh <- &ir.Error{Original: err}
+		lr.errCh <- &inputReader.Error{Original: err}
 		return
 	}
 
@@ -53,12 +52,12 @@ func (lr *localInputReader) splitInput(inputCh <-chan []byte, key string, totalS
 		return []byte(strings.Join(strs, "\n"))
 	}
 
-	nChunk := 0
+	nChunk := uint(0)
 	resetCh := make(chan interface{}, 1)
 	splitResultCh := lr.Splitter.SplitInput(inputCh, totalSize)
 	splitCh := splitResultCh
-	var output *util.KeyValueChunk
-	var readOutputCh chan *util.KeyValueChunk
+	var output *mrutil.DataChunk
+	var readOutputCh chan *mrutil.DataChunk
 
 	for {
 		select {
@@ -71,7 +70,7 @@ func (lr *localInputReader) splitInput(inputCh <-chan []byte, key string, totalS
 			nChunk++
 			readOutputCh = lr.readCh
 			joined := joinBytes(chunk)
-			output = &util.KeyValueChunk{Key: key, Value: joined, NChunk: nChunk}
+			output = &mrutil.DataChunk{Key: key, Value: joined, NChunk: nChunk}
 
 		case readOutputCh <- output:
 			readOutputCh = nil

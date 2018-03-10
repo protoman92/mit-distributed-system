@@ -1,4 +1,4 @@
-package string
+package stringSplitter
 
 import (
 	"bufio"
@@ -22,7 +22,11 @@ func (ss *stringSplitter) SplitInput(inputCh <-chan []byte, totalSize int64) <-c
 			select {
 			case input, ok := <-inputCh:
 				if !ok {
-					outCh <- intermediate
+					// Send whatever that has not been sent upstream.
+					if len(intermediate) > 0 {
+						outCh <- intermediate
+					}
+
 					close(outCh)
 					ss.LogMan.Printf("%v: finished splitting input\n", ss)
 					return

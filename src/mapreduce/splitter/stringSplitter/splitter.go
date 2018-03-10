@@ -1,4 +1,4 @@
-package string
+package stringSplitter
 
 import (
 	"github.com/protoman92/mit-distributed-system/src/util"

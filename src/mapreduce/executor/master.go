@@ -7,8 +7,8 @@ import (
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/rpcutil"
 	"github.com/protoman92/mit-distributed-system/src/util"
 
-	mrutil "github.com/protoman92/mit-distributed-system/src/mapreduce/util"
-	wk "github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
 
 // Params represents the required parameters to build a Master. Consult the net
@@ -45,9 +45,9 @@ type executor struct {
 	workers               []string
 	doneCh                chan interface{}
 	errCh                 chan error
-	inputCh               chan *mrutil.KeyValueChunk
+	inputCh               chan *mrutil.DataChunk
 	inputShutdownCh       chan interface{}
-	jobQueueCh            chan *wk.JobParams
+	jobQueueCh            chan *worker.JobParams
 	registerShutdownCh    chan interface{}
 	shutdownCh            chan interface{}
 	updateWorkerCh        chan string
@@ -63,8 +63,8 @@ func (e *executor) setListener(listener net.Listener) {
 
 // This call blocks, so we will need a timeout channel when we distribute jobs
 // so that the master knows when to assign the work to another worker.
-func (e *executor) distributeWork(params *wk.JobParams, address string) error {
-	jobReply := &wk.JobReply{}
+func (e *executor) distributeWork(params *worker.JobParams, address string) error {
+	jobReply := &worker.JobReply{}
 
 	cParams := &rpcutil.CallParams{
 		Args:    params,
@@ -90,16 +90,16 @@ func (e *executor) shutdown() {
 	}
 }
 
-func (e *executor) shutdownWorker(worker string) {
-	args := &wk.ShutdownParams{}
-	reply := &wk.ShutdownReply{}
+func (e *executor) shutdownWorker(workerAddress string) {
+	args := &worker.ShutdownParams{}
+	reply := &worker.ShutdownReply{}
 
 	cParams := &rpcutil.CallParams{
 		Args:    args,
 		Method:  e.WorkerShutdownMethod,
 		Network: e.Network,
 		Reply:   reply,
-		Target:  worker,
+		Target:  workerAddress,
 	}
 
 	if err := rpcutil.Call(cParams); err != nil {
@@ -115,9 +115,9 @@ func NewRPCMasterExecutor(params Params) Executor {
 
 	master := &executor{
 		Params:                checked,
-		inputCh:               make(chan *mrutil.KeyValueChunk, 0),
+		inputCh:               make(chan *mrutil.DataChunk, 0),
 		inputShutdownCh:       make(chan interface{}, 0),
-		jobQueueCh:            make(chan *wk.JobParams),
+		jobQueueCh:            make(chan *worker.JobParams),
 		registerShutdownCh:    make(chan interface{}, 0),
 		shutdownCh:            shutdownCh,
 		updateWorkerCh:        make(chan string, 0),
@@ -130,7 +130,7 @@ func NewRPCMasterExecutor(params Params) Executor {
 		},
 	}
 
-	go master.loopInput()
+	go master.loopInputChunk()
 	go master.loopRegistration()
 	go master.loopShutdown()
 	go master.loopUpdateWorker()

@@ -1,10 +1,9 @@
 package orchestrator
 
 import (
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader"
 	"github.com/protoman92/mit-distributed-system/src/util"
-
-	exc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
-	ir "github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader"
 )
 
 // Orchestrator represents a MapReduce process orchestrator. When initialized,
@@ -18,8 +17,8 @@ type Orchestrator interface {
 
 // Params represents the required parameters to build an Orchestrator.
 type Params struct {
-	Executor    exc.Executor
-	InputReader ir.InputReader
+	Executor    executor.Executor
+	InputReader inputReader.InputReader
 	LogMan      util.LogMan
 }
 

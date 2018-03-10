@@ -4,6 +4,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mapper"
 	"github.com/protoman92/mit-distributed-system/src/util"
 )
 
@@ -15,6 +16,7 @@ type Worker interface{}
 type Params struct {
 	Address              string
 	LogMan               util.LogMan
+	Mapper               mapper.Mapper
 	MasterAddress        string
 	MasterRegisterMethod string
 	Network              string
@@ -22,6 +24,7 @@ type Params struct {
 
 func checkParams(params *Params) *Params {
 	if params.Address == "" ||
+		params.Mapper == nil ||
 		params.MasterAddress == "" ||
 		params.MasterRegisterMethod == "" ||
 		params.Network == "" {

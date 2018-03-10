@@ -5,16 +5,64 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
+	"strings"
+	"sync"
 
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader/localReader"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mapper/localMapper"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/orchestrator/localOrc"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/splitter/stringSplitter"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 	"github.com/protoman92/mit-distributed-system/src/util"
-
-	exc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
-	ir "github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader/local"
-	lorc "github.com/protoman92/mit-distributed-system/src/mapreduce/orchestrator/local"
-	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter/string"
-	wk "github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
+
+var (
+	rgx = regexp.MustCompile("[^a-zA-Z0-9 ]+")
+)
+
+// MapFunc for mapper - count word occurrence for a piece of string.
+func MapFunc(chunk *mrutil.DataChunk) error {
+	value := chunk.ValueString()
+	wordMap := make(map[string]int, 0)
+	lines := strings.Split(value, "\n")
+	var wordMutex sync.RWMutex
+	var waitGroup sync.WaitGroup
+
+	addWordCount := func(words string) {
+		cleaned := rgx.ReplaceAllString(words, "")
+		delimited := strings.Split(cleaned, " ")
+
+		for ix := range delimited {
+			word := delimited[ix]
+			wordMutex.Lock()
+			wordMap[word] = wordMap[word] + 1
+			wordMutex.Unlock()
+		}
+	}
+
+	getWordMap := func() map[string]int {
+		wordMutex.RLock()
+		defer wordMutex.RUnlock()
+		return wordMap
+	}
+
+	for ix := range lines {
+		waitGroup.Add(1)
+
+		go func(words string) {
+			addWordCount(words)
+			waitGroup.Done()
+		}(lines[ix])
+	}
+
+	waitGroup.Wait()
+	fmt.Println(getWordMap())
+	return nil
+}
 
 // our simplified version of MapReduce does not supply a
 // key to the Map function, as in the paper; only a value,
@@ -60,18 +108,18 @@ func main() {
 	// Only applicable for "unix".
 	os.Remove(masterAddress)
 
-	logman := util.NewLogMan(util.LogManParams{Log: true})
+	logman := util.NewLogMan(util.LogManParams{Log: false})
 
-	oParams := lorc.Params{
-		ExecutorParams: exc.Params{
+	oParams := localOrc.Params{
+		ExecutorParams: executor.Params{
 			Address:              masterAddress,
 			LogMan:               logman,
 			Network:              network,
 			WorkerDoJobMethod:    "WkDelegate.DoWork",
 			WorkerShutdownMethod: "WkDelegate.Shutdown",
 		},
-		InputReaderParams: ir.Params{
-			SplitterParams: sp.Params{
+		InputReaderParams: localReader.Params{
+			SplitterParams: stringSplitter.Params{
 				ChunkCount: 10,
 				LogMan:     logman,
 				SplitToken: '\n',
@@ -81,7 +129,7 @@ func main() {
 		LogMan: logman,
 	}
 
-	orchestrator := lorc.NewLocalOrchestrator(oParams)
+	orchestrator := localOrc.NewLocalOrchestrator(oParams)
 	workerCount := 5
 
 	for i := 0; i < workerCount; i++ {
@@ -90,15 +138,18 @@ func main() {
 		// Only applicable for "unix".
 		os.Remove(address)
 
-		wkParams := wk.Params{
+		mapper := localMapper.NewLocalMapper(localMapper.Params{MapFunc: MapFunc})
+
+		wkParams := worker.Params{
 			Address:              address,
 			LogMan:               logman,
+			Mapper:               mapper,
 			MasterAddress:        masterAddress,
 			MasterRegisterMethod: "ExcDelegate.Register",
 			Network:              network,
 		}
 
-		wk.NewRPCWorker(wkParams)
+		worker.NewRPCWorker(wkParams)
 	}
 
 	doneCh := make(chan interface{}, 1)

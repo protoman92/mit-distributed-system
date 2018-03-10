@@ -1,15 +1,15 @@
-package local
+package localReader
 
 import (
-	ir "github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader"
-	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter"
-	ss "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter/string"
-	"github.com/protoman92/mit-distributed-system/src/mapreduce/util"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/splitter"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/splitter/stringSplitter"
 )
 
 // Params represents the required parameters to build a LocalInputReader.
 type Params struct {
-	SplitterParams ss.Params
+	SplitterParams stringSplitter.Params
 	FilePaths      []string
 }
 
@@ -23,20 +23,20 @@ func checkParams(params *Params) *Params {
 
 type localInputReader struct {
 	*Params
-	sp.Splitter
+	splitter.Splitter
 	errCh  chan error
-	readCh chan *util.KeyValueChunk
+	readCh chan *mrutil.DataChunk
 }
 
 // NewLocalInputReader returns a new LocalInputReader.
-func NewLocalInputReader(params Params) ir.InputReader {
+func NewLocalInputReader(params Params) inputReader.InputReader {
 	checked := checkParams(&params)
 
 	lr := &localInputReader{
 		Params:   checked,
-		Splitter: ss.NewStringSplitter(checked.SplitterParams),
+		Splitter: stringSplitter.NewStringSplitter(checked.SplitterParams),
 		errCh:    make(chan error, 1),
-		readCh:   make(chan *util.KeyValueChunk, 0),
+		readCh:   make(chan *mrutil.DataChunk, 0),
 	}
 
 	for ix := range params.FilePaths {

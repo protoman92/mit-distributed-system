@@ -1,23 +1,21 @@
 package executor
 
 import (
-	"fmt"
 	"net"
 	"net/rpc"
 
-	"github.com/protoman92/mit-distributed-system/src/mapreduce/util"
-
-	wk "github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
 
 // We create jobs and deposit them into the job queue. The job queue will then
 // deliver jobs to workers and retake failed jobs.
-func (e *executor) loopInput() {
+func (e *executor) loopInputChunk() {
 	inputCh := e.inputCh
 	jobNumber := uint(0)
 	resetCh := make(chan interface{}, 1)
-	var job *wk.JobParams
-	var jobCh chan *wk.JobParams
+	var job *worker.JobParams
+	var jobCh chan *worker.JobParams
 
 	for {
 		select {
@@ -27,17 +25,15 @@ func (e *executor) loopInput() {
 				return
 			}
 
-			fmt.Println(kv)
-
 			inputCh = nil
 			jobNumber++
 			jobCh = e.jobQueueCh
 
-			job = &wk.JobParams{
+			job = &worker.JobParams{
 				Data:      kv.Value,
 				Key:       kv.Key,
 				JobNumber: jobNumber,
-				JobType:   util.Map,
+				JobType:   mrutil.Map,
 			}
 
 		case jobCh <- job:
@@ -124,7 +120,7 @@ func (e *executor) loopUpdateWorker() {
 func (e *executor) loopWorkDistribution() {
 	jobCh := e.jobQueueCh
 	resetCh := make(chan interface{}, 1)
-	var job *wk.JobParams
+	var job *worker.JobParams
 	var workerCh chan string
 
 	for {
