@@ -9,7 +9,7 @@ type CallParams struct {
 }
 
 // Call calls a RPC method for a target addressn.
-func Call(params *CallParams) error {
+func Call(params CallParams) error {
 	conn, err := rpc.Dial(params.Network, params.Target)
 
 	if err != nil {
