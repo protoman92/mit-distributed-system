@@ -40,3 +40,14 @@ type ShutdownParams struct{}
 
 // ShutdownReply represents the response from a shutdown.
 type ShutdownReply struct{}
+
+// This is used internally by a worker to receive jobs and return errors if
+// present.
+type jobRequest struct {
+	details *JobParams
+	errCh   chan error
+}
+
+func (r *jobRequest) String() string {
+	return r.details.String()
+}

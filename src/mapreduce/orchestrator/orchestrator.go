@@ -1,10 +1,10 @@
 package orchestrator
 
 import (
+	"github.com/protoman92/mit-distributed-system/src/util"
+
 	exc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
 	ir "github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader"
-	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter"
-	"github.com/protoman92/mit-distributed-system/src/util"
 )
 
 // Orchestrator represents a MapReduce process orchestrator. When initialized,
@@ -21,7 +21,6 @@ type Params struct {
 	Executor    exc.Executor
 	InputReader ir.InputReader
 	LogMan      util.LogMan
-	Splitter    sp.Splitter
 }
 
 func checkParams(params *Params) *Params {
@@ -37,20 +36,11 @@ type orchestrator struct {
 	errCh chan error
 }
 
-func (o *orchestrator) DoneChannel() <-chan interface{} {
-	return o.Executor.DoneChannel()
-}
-
-func (o *orchestrator) ErrorChannel() <-chan error {
-	return o.errCh
-}
-
 // NewOrchestrator returns a new Orchestrator.
 func NewOrchestrator(params *Params) Orchestrator {
 	checked := checkParams(params)
 	orchestrator := &orchestrator{Params: checked, errCh: make(chan error, 0)}
 	go orchestrator.loopError()
 	go orchestrator.loopReadInput()
-	go orchestrator.loopReceiveSplitResult()
 	return orchestrator
 }

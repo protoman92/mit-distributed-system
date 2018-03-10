@@ -11,6 +11,7 @@ func (w *servant) loopPerformJobs() {
 	for {
 		select {
 		case request := <-jobRequestCh:
+			w.LogMan.Printf("%v: Received job request %v\n", w, request)
 			request.errCh <- nil
 
 			// Register again to notify master that this worker is ready for more

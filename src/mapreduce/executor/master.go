@@ -45,7 +45,7 @@ type executor struct {
 	workers               []string
 	doneCh                chan interface{}
 	errCh                 chan error
-	inputCh               chan *mrutil.KeyValue
+	inputCh               chan *mrutil.KeyValueChunk
 	inputShutdownCh       chan interface{}
 	jobQueueCh            chan *wk.JobParams
 	registerShutdownCh    chan interface{}
@@ -53,18 +53,6 @@ type executor struct {
 	updateWorkerCh        chan string
 	workerCh              chan string
 	workDistribShutdownCh chan interface{}
-}
-
-func (e *executor) DoneChannel() <-chan interface{} {
-	return e.doneCh
-}
-
-func (e *executor) ErrorChannel() <-chan error {
-	return e.errCh
-}
-
-func (e *executor) InputReceiptChannel() chan<- *mrutil.KeyValue {
-	return e.inputCh
 }
 
 func (e *executor) setListener(listener net.Listener) {
@@ -127,7 +115,7 @@ func NewRPCMasterExecutor(params Params) Executor {
 
 	master := &executor{
 		Params:                checked,
-		inputCh:               make(chan *mrutil.KeyValue, 0),
+		inputCh:               make(chan *mrutil.KeyValueChunk, 0),
 		inputShutdownCh:       make(chan interface{}, 0),
 		jobQueueCh:            make(chan *wk.JobParams),
 		registerShutdownCh:    make(chan interface{}, 0),

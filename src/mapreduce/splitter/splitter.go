@@ -1,16 +1,10 @@
 package splitter
 
-import "github.com/protoman92/mit-distributed-system/src/mapreduce/util"
-
-// Splitter is responsible for splitting some input into chunks to feed to a
-// number of workers.
+// Splitter is responsible for splitting some input into chunks.
 type Splitter interface {
-	DoneReceiptChannel() chan<- interface{}
-	InputReceiptChannel() chan<- *util.KeyValueSize
-	SeparatorToken() byte
-
-	// This is a channel of channels because each split portions may be too large
-	// to transmit all at once. Instead, we may split the delivery of each even
-	// further to minimize size.
-	SplitResultChannel() <-chan *util.KeyValuePipe
+	// The parameters in this method cannot be supplied at creation time because
+	// they are only available once an input is being read. The emission is a
+	// slice of byte slices because we want the caller to deal with discrete
+	// inputs (for e.g., join them together with newlines).
+	SplitInput(inputCh <-chan []byte, totalSize int64) <-chan [][]byte
 }

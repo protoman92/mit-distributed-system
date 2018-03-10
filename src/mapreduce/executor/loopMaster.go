@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"fmt"
 	"net"
 	"net/rpc"
 
@@ -22,9 +23,11 @@ func (e *executor) loopInput() {
 		select {
 		case kv, ok := <-inputCh:
 			if !ok {
-				e.LogMan.Printf("Finished receiving inputs")
+				e.LogMan.Printf("%v:, Finished receiving inputs", e)
 				return
 			}
+
+			fmt.Println(kv)
 
 			inputCh = nil
 			jobNumber++

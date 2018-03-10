@@ -35,8 +35,9 @@ func Reduce(key string, values *list.List) string {
 // 3) Worker (e.g., go run wc.go worker localhost:7777 localhost:7778 &)
 func main() {
 	fileNames := []string{
-		// "kjv12.txt",
-		"randomtext.txt",
+		"kjv12.txt",
+		// "randomtext.txt",
+		// "randomtext2.txt",
 	}
 
 	wd, err := os.Getwd()
@@ -69,11 +70,13 @@ func main() {
 			WorkerDoJobMethod:    "WkDelegate.DoWork",
 			WorkerShutdownMethod: "WkDelegate.Shutdown",
 		},
-		InputReaderParams: ir.Params{FilePaths: filePaths},
-		SplitterParams: sp.Params{
-			ChunkCount: 5,
-			LogMan:     logman,
-			SplitToken: '\n',
+		InputReaderParams: ir.Params{
+			SplitterParams: sp.Params{
+				ChunkCount: 10,
+				LogMan:     logman,
+				SplitToken: '\n',
+			},
+			FilePaths: filePaths,
 		},
 		LogMan: logman,
 	}
@@ -89,6 +92,7 @@ func main() {
 
 		wkParams := wk.Params{
 			Address:              address,
+			LogMan:               logman,
 			MasterAddress:        masterAddress,
 			MasterRegisterMethod: "ExcDelegate.Register",
 			Network:              network,

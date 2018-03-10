@@ -3,22 +3,18 @@ package worker
 import (
 	"net"
 	"sync"
+
+	"github.com/protoman92/mit-distributed-system/src/util"
 )
 
 // Worker represents a MapReduce worker. In a distributed system, master(s) will
 // hand work to registered workers.
 type Worker interface{}
 
-// This is used internally by a worker to receive jobs and return errors if
-// present.
-type jobRequest struct {
-	details *JobParams
-	errCh   chan error
-}
-
 // Params represents the required parameters to build a RPC worker.
 type Params struct {
 	Address              string
+	LogMan               util.LogMan
 	MasterAddress        string
 	MasterRegisterMethod string
 	Network              string
@@ -30,6 +26,10 @@ func checkParams(params *Params) *Params {
 		params.MasterRegisterMethod == "" ||
 		params.Network == "" {
 		panic("Invalid parameters")
+	}
+
+	if params.LogMan == nil {
+		params.LogMan = util.NewLogMan(util.LogManParams{})
 	}
 
 	return params
