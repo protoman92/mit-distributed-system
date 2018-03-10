@@ -1,7 +1,7 @@
-package rpc
+package executor
 
 import (
-	erpc "github.com/protoman92/mit-distributed-system/src/mapreduce/worker/rpc"
+	wk "github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
 
 // ExcDelegate represents a delegate for RPC Master to export via rpc.
@@ -13,7 +13,7 @@ type ExcDelegate struct {
 // Register registers a worker via RPC. This method can be invoked whenever a
 // worker has capacity to perform more work, so the master does not need to know
 // which worker is free.
-func (d *ExcDelegate) Register(args *erpc.RegisterParams, reply *erpc.RegisterReply) error {
+func (d *ExcDelegate) Register(args *wk.RegisterParams, reply *wk.RegisterReply) error {
 	d.workerCh <- args.WorkerAddress
 	return nil
 }

@@ -1,4 +1,4 @@
-package rpc
+package worker
 
 import "github.com/protoman92/mit-distributed-system/src/mapreduce/rpcutil"
 

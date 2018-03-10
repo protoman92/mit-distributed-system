@@ -9,11 +9,11 @@ import (
 
 	"github.com/protoman92/mit-distributed-system/src/util"
 
-	erpc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor/rpc"
+	exc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
 	ir "github.com/protoman92/mit-distributed-system/src/mapreduce/inputReader/local"
 	lorc "github.com/protoman92/mit-distributed-system/src/mapreduce/orchestrator/local"
 	sp "github.com/protoman92/mit-distributed-system/src/mapreduce/splitter/string"
-	wrpc "github.com/protoman92/mit-distributed-system/src/mapreduce/worker/rpc"
+	wk "github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
 
 // our simplified version of MapReduce does not supply a
@@ -62,7 +62,7 @@ func main() {
 	logman := util.NewLogMan(util.LogManParams{Log: true})
 
 	oParams := lorc.Params{
-		ExecutorParams: erpc.Params{
+		ExecutorParams: exc.Params{
 			Address:              masterAddress,
 			LogMan:               logman,
 			Network:              network,
@@ -70,7 +70,12 @@ func main() {
 			WorkerShutdownMethod: "WkDelegate.Shutdown",
 		},
 		InputReaderParams: ir.Params{FilePaths: filePaths},
-		SplitterParams:    sp.Params{ChunkCount: 5, SplitToken: '\n'},
+		SplitterParams: sp.Params{
+			ChunkCount: 5,
+			LogMan:     logman,
+			SplitToken: '\n',
+		},
+		LogMan: logman,
 	}
 
 	orchestrator := lorc.NewLocalOrchestrator(oParams)
@@ -82,14 +87,14 @@ func main() {
 		// Only applicable for "unix".
 		os.Remove(address)
 
-		wkParams := wrpc.Params{
+		wkParams := wk.Params{
 			Address:              address,
 			MasterAddress:        masterAddress,
 			MasterRegisterMethod: "ExcDelegate.Register",
 			Network:              network,
 		}
 
-		wrpc.NewRPCWorker(wkParams)
+		wk.NewRPCWorker(wkParams)
 	}
 
 	doneCh := make(chan interface{}, 1)

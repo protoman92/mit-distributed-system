@@ -1,4 +1,4 @@
-package rpc
+package worker
 
 // WkDelegate represents a RPC Worker's exported delegate that transmits events
 // back to said worker.

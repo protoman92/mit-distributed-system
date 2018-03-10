@@ -1,20 +1,23 @@
 package orchestrator
 
 import (
-	"fmt"
-
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/util"
 )
 
 func (o *orchestrator) loopReadInput() {
 	for {
 		select {
-		case kvPipe := <-o.InputReader.ReadInputChannel():
+		case kvPipe, ok := <-o.InputReader.ReadInputChannel():
+			if !ok {
+				o.LogMan.Printf("Finished reading input\n")
+				return
+			}
+
 			go func() {
 				resetCh := make(chan interface{}, 1)
 				rwInputCh := kvPipe.ValueCh
 				var splitterInputCh chan<- *util.KeyValueSize
-				var keyValue *util.KeyValueSize
+				var kvs *util.KeyValueSize
 
 				for {
 					select {
@@ -26,14 +29,14 @@ func (o *orchestrator) loopReadInput() {
 						rwInputCh = nil
 						splitterInputCh = o.Splitter.InputReceiptChannel()
 
-						keyValue = &util.KeyValueSize{
+						kvs = &util.KeyValueSize{
 							KeyValue:  &util.KeyValue{Key: kvPipe.Key, Value: input},
 							TotalSize: kvPipe.TotalSize,
 						}
 
-					case splitterInputCh <- keyValue:
+					case splitterInputCh <- kvs:
 						splitterInputCh = nil
-						keyValue = nil
+						kvs = nil
 						resetCh <- true
 
 					case <-resetCh:
@@ -66,7 +69,6 @@ func (o *orchestrator) loopReceiveSplitResult() {
 				data = append(data, splitToken)
 			}
 
-			fmt.Printf("Received a chunk of length %d\n", len(data))
 			excInputCh = o.Executor.InputReceiptChannel()
 			keyValue = &util.KeyValue{Key: kvPipe.Key, Value: data}
 
@@ -77,27 +79,6 @@ func (o *orchestrator) loopReceiveSplitResult() {
 
 		case <-resetCh:
 			splitResultCh = o.Splitter.SplitResultChannel()
-		}
-	}
-}
-
-func (o *orchestrator) loopDoneInput() {
-	rwDoneInputCh := o.InputReader.DoneInputChannel()
-	resetCh := make(chan interface{}, 1)
-	var splitDoneReceiptCh chan<- interface{}
-
-	for {
-		select {
-		case <-rwDoneInputCh:
-			rwDoneInputCh = nil
-			splitDoneReceiptCh = o.Splitter.DoneReceiptChannel()
-
-		case splitDoneReceiptCh <- true:
-			splitDoneReceiptCh = nil
-			resetCh <- true
-
-		case <-resetCh:
-			rwDoneInputCh = o.InputReader.DoneInputChannel()
 		}
 	}
 }

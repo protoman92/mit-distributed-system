@@ -46,6 +46,10 @@ type KeyValuePipe struct {
 	TotalSize int64
 }
 
+func (kvp *KeyValuePipe) String() string {
+	return fmt.Sprintf("Value pipe for key %s", kvp.Key)
+}
+
 // RPC arguments and replies.  Field names must start with capital letters,
 // otherwise RPC will break.
 type DoJobArgs struct {

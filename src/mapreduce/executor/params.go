@@ -1,4 +1,4 @@
-package rpc
+package executor
 
 // ShutdownParams represents the necessary parameters for a shutdown request.
 type ShutdownParams struct{}

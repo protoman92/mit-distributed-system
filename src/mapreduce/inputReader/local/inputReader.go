@@ -12,13 +12,8 @@ type Params struct {
 
 type localInputReader struct {
 	*Params
-	doneInputCh chan interface{}
-	errCh       chan error
-	readCh      chan *util.KeyValuePipe
-}
-
-func (lr *localInputReader) DoneInputChannel() <-chan interface{} {
-	return lr.doneInputCh
+	errCh  chan error
+	readCh chan *util.KeyValuePipe
 }
 
 func (lr *localInputReader) ErrorChannel() <-chan error {
@@ -32,10 +27,9 @@ func (lr *localInputReader) ReadInputChannel() <-chan *util.KeyValuePipe {
 // NewLocalInputReader returns a new LocalInputReader.
 func NewLocalInputReader(params Params) ir.InputReader {
 	lr := &localInputReader{
-		Params:      &params,
-		doneInputCh: make(chan interface{}, 0),
-		errCh:       make(chan error, 1),
-		readCh:      make(chan *util.KeyValuePipe, 0),
+		Params: &params,
+		errCh:  make(chan error, 1),
+		readCh: make(chan *util.KeyValuePipe, 0),
 	}
 
 	for ix := range params.FilePaths {

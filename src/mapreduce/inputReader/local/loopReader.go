@@ -45,5 +45,4 @@ func (lr *localInputReader) loopWork(path string) {
 	}
 
 	close(valuePipeCh)
-	lr.doneInputCh <- true
 }

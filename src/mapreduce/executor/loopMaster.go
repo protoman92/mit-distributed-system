@@ -1,12 +1,12 @@
-package rpc
+package executor
 
 import (
 	"net"
 	"net/rpc"
 
-	exc "github.com/protoman92/mit-distributed-system/src/mapreduce/executor"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/util"
-	erpc "github.com/protoman92/mit-distributed-system/src/mapreduce/worker/rpc"
+
+	wk "github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
 
 // We create jobs and deposit them into the job queue. The job queue will then
@@ -15,8 +15,8 @@ func (e *executor) loopInput() {
 	inputCh := e.inputCh
 	jobNumber := uint(0)
 	resetCh := make(chan interface{}, 1)
-	var job *erpc.JobParams
-	var jobCh chan *erpc.JobParams
+	var job *wk.JobParams
+	var jobCh chan *wk.JobParams
 
 	for {
 		select {
@@ -30,7 +30,7 @@ func (e *executor) loopInput() {
 			jobNumber++
 			jobCh = e.jobQueueCh
 
-			job = &erpc.JobParams{
+			job = &wk.JobParams{
 				Data:      kv.Value,
 				Key:       kv.Key,
 				JobNumber: jobNumber,
@@ -57,7 +57,7 @@ func (e *executor) loopRegistration() {
 	listener, err := net.Listen(e.Network, e.Address)
 
 	if err != nil {
-		e.errCh <- &exc.Error{Original: err}
+		e.errCh <- &Error{Original: err}
 		return
 	}
 
@@ -81,7 +81,7 @@ func (e *executor) loopRegistration() {
 						rpcs.ServeConn(conn)
 					}()
 				} else {
-					e.errCh <- &exc.Error{Original: err}
+					e.errCh <- &Error{Original: err}
 					return
 				}
 			}
@@ -121,7 +121,7 @@ func (e *executor) loopUpdateWorker() {
 func (e *executor) loopWorkDistribution() {
 	jobCh := e.jobQueueCh
 	resetCh := make(chan interface{}, 1)
-	var job *erpc.JobParams
+	var job *wk.JobParams
 	var workerCh chan string
 
 	for {
