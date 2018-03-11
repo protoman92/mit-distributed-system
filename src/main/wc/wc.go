@@ -1,19 +1,25 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path"
+	"reflect"
 	"time"
 
-	"github.com/protoman92/mit-distributed-system/src/mapreduce/rpcutil"
+	"github.com/protoman92/mit-distributed-system/src/rpcutil/rpchandler"
+
+	"github.com/protoman92/mit-distributed-system/src/rpcutil"
 
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/master"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 	"github.com/protoman92/mit-distributed-system/src/util"
 )
 
 const (
 	masterAddress = "master"
 	network       = "unix"
+	workerAddress = "worker"
 )
 
 func sendJobRequest() {
@@ -54,19 +60,26 @@ func sendJobRequest() {
 }
 
 func sendShutdownRequest() {
-	request := &master.ShutdownRequest{}
-	reply := &master.ShutdownReply{}
-
-	callParams := rpcutil.CallParams{
-		Args:    request,
-		Method:  "MstDelegate.Shutdown",
-		Network: network,
-		Reply:   reply,
-		Target:  masterAddress,
-	}
-
-	if err := rpcutil.Call(callParams); err != nil {
+	if err := rpchandler.Shutdown(network, masterAddress); err != nil {
 		panic(err)
+	}
+}
+
+func loopMasterError(m master.Master) {
+	for {
+		select {
+		case err := <-m.ErrorChannel():
+			fmt.Println(reflect.TypeOf(err), ":", err)
+		}
+	}
+}
+
+func loopWorkerError(w worker.Worker) {
+	for {
+		select {
+		case err := <-w.ErrorChannel():
+			fmt.Println(reflect.TypeOf(err), ":", err)
+		}
 	}
 }
 
@@ -74,13 +87,35 @@ func main() {
 	os.Remove(masterAddress)
 	logMan := util.NewLogMan(util.LogManParams{Log: true})
 
-	masterParams := master.Params{
-		Address: masterAddress,
-		LogMan:  logMan,
-		Network: network,
+	master := master.NewMaster(master.Params{
+		LogMan: logMan,
+		RPCParams: rpchandler.Params{
+			Address: masterAddress,
+			LogMan:  logMan,
+			Network: network,
+		},
+	})
+
+	for i := 0; i < 10; i++ {
+		wkAddress := fmt.Sprintf("%s-%d", workerAddress, i)
+		os.Remove(wkAddress)
+
+		worker := worker.NewWorker(worker.Params{
+			LogMan:               logMan,
+			MasterAddress:        masterAddress,
+			MasterRegisterMethod: "MstDelegate.RegisterWorker",
+			RPCParams: rpchandler.Params{
+				Address: wkAddress,
+				LogMan:  logMan,
+				Network: network,
+			},
+		})
+
+		go loopWorkerError(worker)
 	}
 
-	_ = master.NewMaster(masterParams)
+	go loopMasterError(master)
+
 	sendJobRequest()
 	time.Sleep(2e9)
 	sendShutdownRequest()

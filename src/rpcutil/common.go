@@ -1,6 +1,8 @@
 package rpcutil
 
-import "net/rpc"
+import (
+	"net/rpc"
+)
 
 // CallParams represents the required parameters to perform an RPC call.
 type CallParams struct {

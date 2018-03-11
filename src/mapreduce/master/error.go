@@ -12,8 +12,12 @@ func (e *Error) Error() string {
 func (m *master) loopError() {
 	for {
 		select {
-		case err := <-m.errCh:
-			m.LogMan.Printf("%v: received error %v\n", m, err)
+		case err := <-m.rpcHandler.ErrorChannel():
+			m.errCh <- &Error{Original: err}
 		}
 	}
+}
+
+func (m *master) ErrorChannel() <-chan error {
+	return m.errCh
 }
