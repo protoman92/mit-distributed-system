@@ -1,6 +1,23 @@
 package worker
 
-import "github.com/protoman92/mit-distributed-system/src/util"
+import (
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
+	"github.com/protoman92/mit-distributed-system/src/util"
+)
+
+// CheckJobRequest checks the validity of a JobRequest.
+func CheckJobRequest(r *JobRequest) {
+	if r.FilePath == "" || r.Type == mrutil.TaskType(0) {
+		panic("Invalid parameters")
+	}
+}
+
+// CheckTask checks the validity of a task.
+func CheckTask(t *Task) {
+	if t.Status == mrutil.TaskStatus(0) || t.Worker == "" {
+		panic("Invalid parameters")
+	}
+}
 
 func checkParams(params *Params) *Params {
 	if params.MasterRegisterMethod == "" {

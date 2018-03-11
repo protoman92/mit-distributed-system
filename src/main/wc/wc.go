@@ -12,6 +12,8 @@ import (
 	"github.com/protoman92/mit-distributed-system/src/rpcutil"
 
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/master"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/masterstate/localstate"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 	"github.com/protoman92/mit-distributed-system/src/util"
 )
@@ -43,7 +45,7 @@ func sendJobRequest() {
 		filePaths = append(filePaths, path.Join(fileDir, fileNames[ix]))
 	}
 
-	request := &master.JobRequest{FilePaths: filePaths}
+	request := &master.JobRequest{FilePaths: filePaths, Type: mrutil.Map}
 	reply := &master.JobReply{}
 
 	callParams := rpcutil.CallParams{
@@ -90,6 +92,7 @@ func main() {
 	master := master.NewMaster(master.Params{
 		LogMan:     logMan,
 		PingPeriod: 3e9,
+		State:      localstate.NewLocalState(),
 		RPCParams: rpchandler.Params{
 			Address: masterAddress,
 			LogMan:  logMan,

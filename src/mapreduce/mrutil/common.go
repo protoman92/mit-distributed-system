@@ -2,23 +2,26 @@ package mrutil
 
 const (
 	// Idle means the task is ready to be handled off.
-	Idle Status = 0
+	Idle TaskStatus = 1
 
 	// InProgress means the task is being performed.
-	InProgress Status = 1
+	InProgress TaskStatus = 2
 
 	// Completed means the task is completed.
-	Completed Status = 2
+	Completed TaskStatus = 3
 
 	// Map represents the Map task type.
-	Map Type = 0
+	Map TaskType = 1
 
 	// Reduce represents the Reduce task type.
-	Reduce Type = 1
+	Reduce TaskType = 2
+
+	// UnassignedWorker means that a task has yet to be assigned to any worker.
+	UnassignedWorker = "UNASSIGNED"
 )
 
-// Status represents a task's completion status.
-type Status uint
+// TaskStatus represents a task's completion status.
+type TaskStatus uint
 
-// Type represents a task's type (Map or Reduce).
-type Type uint
+// TaskType represents a task's type (Map or Reduce).
+type TaskType uint

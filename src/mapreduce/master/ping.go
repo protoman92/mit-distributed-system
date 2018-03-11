@@ -3,9 +3,8 @@ package master
 import (
 	"time"
 
-	"github.com/protoman92/mit-distributed-system/src/rpcutil"
-
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
+	"github.com/protoman92/mit-distributed-system/src/rpcutil"
 )
 
 func (m *master) loopPing(w string) {

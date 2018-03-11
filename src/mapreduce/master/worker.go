@@ -1,23 +1,10 @@
 package master
 
-func (m *master) registerWorker(w string) {
-	m.mutex.RLock()
-	var existing bool
-
-	for ix := range m.workers {
-		if m.workers[ix] == w {
-			existing = true
-			break
+func (m *master) loopWorker() {
+	for {
+		select {
+		case worker := <-m.workerQueueCh:
+			m.LogMan.Printf("%v: worker %s is ready to work.\n", m, worker)
 		}
-	}
-
-	m.mutex.RUnlock()
-
-	if !existing {
-		m.LogMan.Printf("%v: adding new worker %s\n", m, w)
-		go m.loopPing(w)
-		m.mutex.Lock()
-		defer m.mutex.Unlock()
-		m.workers = append(m.workers, w)
 	}
 }

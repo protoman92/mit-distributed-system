@@ -3,7 +3,7 @@ package master
 import "github.com/protoman92/mit-distributed-system/src/util"
 
 func checkParams(params *Params) *Params {
-	if params.PingPeriod == 0 {
+	if params.PingPeriod == 0 || params.State == nil {
 		panic("Invalid parameters")
 	}
 
@@ -18,7 +18,8 @@ func checkMaster(master *master) {
 	if master.errCh == nil ||
 		master.delegate == nil ||
 		master.shutdownCh == nil ||
-		master.workers == nil {
+		master.workers == nil ||
+		master.workerQueueCh == nil {
 		panic("Invalid setup")
 	}
 }

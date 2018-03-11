@@ -3,6 +3,9 @@ package master
 import (
 	"time"
 
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
+
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/masterstate"
 	"github.com/protoman92/mit-distributed-system/src/rpcutil/rpchandler"
 	"github.com/protoman92/mit-distributed-system/src/util"
 )
@@ -12,11 +15,13 @@ type Params struct {
 	RPCParams  rpchandler.Params
 	LogMan     util.LogMan
 	PingPeriod time.Duration
+	State      masterstate.State
 }
 
 // JobRequest represents job request sent to a master.
 type JobRequest struct {
 	FilePaths []string
+	Type      mrutil.TaskType
 }
 
 // JobReply represents the reply to a job request RPC invocation.

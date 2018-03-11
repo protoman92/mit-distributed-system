@@ -14,12 +14,13 @@ type Master interface {
 
 type master struct {
 	*Params
-	delegate   *MstDelegate
-	mutex      *sync.RWMutex
-	rpcHandler rpchandler.Handler
-	workers    []string
-	shutdownCh chan interface{}
-	errCh      chan error
+	delegate      *MstDelegate
+	mutex         *sync.RWMutex
+	rpcHandler    rpchandler.Handler
+	workers       []string
+	shutdownCh    chan interface{}
+	errCh         chan error
+	workerQueueCh chan string
 }
 
 // NewMaster returns a new Master.
@@ -29,13 +30,14 @@ func NewMaster(params Params) Master {
 	checkDelegate(delegate)
 
 	master := &master{
-		Params:     checked,
-		delegate:   delegate,
-		mutex:      &sync.RWMutex{},
-		rpcHandler: rpchandler.NewHandler(checked.RPCParams, delegate),
-		workers:    make([]string, 0),
-		errCh:      make(chan error, 0),
-		shutdownCh: make(chan interface{}, 0),
+		Params:        checked,
+		delegate:      delegate,
+		mutex:         &sync.RWMutex{},
+		rpcHandler:    rpchandler.NewHandler(checked.RPCParams, delegate),
+		workers:       make([]string, 0),
+		errCh:         make(chan error, 0),
+		shutdownCh:    make(chan interface{}, 0),
+		workerQueueCh: make(chan string, 0),
 	}
 
 	checkMaster(master)
@@ -43,5 +45,6 @@ func NewMaster(params Params) Master {
 	go master.loopJobRequest()
 	go master.loopRegister()
 	go master.loopShutdown()
+	go master.loopWorker()
 	return master
 }

@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 	"github.com/protoman92/mit-distributed-system/src/rpcutil/rpchandler"
 	"github.com/protoman92/mit-distributed-system/src/util"
 )
@@ -16,6 +17,7 @@ type Params struct {
 // JobRequest represents a Map/Reduce job request.
 type JobRequest struct {
 	FilePath string
+	Type     mrutil.TaskType
 }
 
 // JobReply represents a reply to a job request.

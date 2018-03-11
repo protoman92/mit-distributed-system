@@ -9,5 +9,5 @@ func (w *worker) String() string {
 }
 
 func (r *JobRequest) String() string {
-	return fmt.Sprintf("Job request: %s", r.FilePath)
+	return fmt.Sprintf("Job request for %v: %s", r.Type, r.FilePath)
 }
