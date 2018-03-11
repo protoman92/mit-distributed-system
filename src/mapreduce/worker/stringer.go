@@ -9,7 +9,7 @@ func (w *worker) String() string {
 }
 
 func (r *JobRequest) String() string {
-	return fmt.Sprintf("Job request %d for %v: %s", r.Type, r.JobNumber, r.FilePath)
+	return fmt.Sprintf("Job request %v: %s", r.Type, r.FilePath)
 }
 
 func (t *Task) String() string {

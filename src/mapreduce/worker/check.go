@@ -7,7 +7,11 @@ import (
 
 // CheckJobRequest checks the validity of a JobRequest.
 func CheckJobRequest(r *JobRequest) {
-	if r.FilePath == "" || r.JobNumber == 0 || r.Type == mrutil.TaskType(0) {
+	if r.FilePath == "" ||
+		r.MapFuncName == "" ||
+		r.MapOpCount == 0 ||
+		r.ReduceOpCount == 0 ||
+		r.Type == mrutil.TaskType(0) {
 		panic("Invalid parameters")
 	}
 }

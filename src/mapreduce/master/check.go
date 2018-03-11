@@ -2,8 +2,21 @@ package master
 
 import "github.com/protoman92/mit-distributed-system/src/util"
 
+// CheckJobRequest checks the validity of a JobRequest.
+func CheckJobRequest(r *JobRequest) {
+	if r.FilePaths == nil ||
+		r.MapFuncName == "" ||
+		r.MapOpCount == 0 ||
+		r.ReduceOpCount == 0 ||
+		r.Type == 0 {
+		panic("Invalid parameters")
+	}
+}
+
 func checkParams(params *Params) *Params {
-	if params.PingPeriod == 0 || params.RetryDuration == 0 || params.State == nil {
+	if params.PingPeriod == 0 ||
+		params.RetryDuration == 0 ||
+		params.State == nil {
 		panic("Invalid parameters")
 	}
 

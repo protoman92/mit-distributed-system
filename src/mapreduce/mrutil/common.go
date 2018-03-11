@@ -20,6 +20,12 @@ const (
 	UnassignedWorker = "UNASSIGNED"
 )
 
+// KeyValue represents a key-value pair emitted by a Map operation.
+type KeyValue struct {
+	Key   string
+	Value string
+}
+
 // TaskStatus represents a task's completion status.
 type TaskStatus uint
 

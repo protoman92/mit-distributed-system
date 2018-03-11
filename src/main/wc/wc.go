@@ -11,6 +11,7 @@ import (
 
 	"github.com/protoman92/mit-distributed-system/src/rpcutil"
 
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mapper"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/master"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/masterstate/localstate"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
@@ -45,8 +46,16 @@ func sendJobRequest() {
 		filePaths = append(filePaths, path.Join(fileDir, fileNames[ix]))
 	}
 
-	request := &master.JobRequest{FilePaths: filePaths, Type: mrutil.Map}
+	request := &master.JobRequest{
+		FilePaths:     filePaths,
+		MapFuncName:   mapper.MapWordCountFn,
+		MapOpCount:    10,
+		ReduceOpCount: 10,
+		Type:          mrutil.Map,
+	}
+
 	reply := &master.JobReply{}
+	master.CheckJobRequest(request)
 
 	callParams := rpcutil.CallParams{
 		Args:    request,

@@ -33,9 +33,11 @@ func (m *master) createTasks(request *JobRequest) []*worker.Task {
 
 	for ix := range request.FilePaths {
 		r := &worker.JobRequest{
-			FilePath:  request.FilePaths[ix],
-			JobNumber: uint(ix + 1),
-			Type:      request.Type,
+			FilePath:      request.FilePaths[ix],
+			MapFuncName:   request.MapFuncName,
+			MapOpCount:    request.MapOpCount,
+			ReduceOpCount: request.ReduceOpCount,
+			Type:          request.Type,
 		}
 
 		worker.CheckJobRequest(r)
