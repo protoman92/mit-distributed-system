@@ -3,7 +3,6 @@ package mapper
 import (
 	"strconv"
 	"strings"
-	"sync"
 	"unicode"
 
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
@@ -15,37 +14,19 @@ const (
 )
 
 // MapWordCount maps on word count.
-func MapWordCount(key string, value [][]byte) []*mrutil.KeyValue {
-	mutex := sync.RWMutex{}
+func MapWordCount(key string, value []byte) []*mrutil.KeyValue {
 	wordMap := make(map[string]int, 0)
-	waitGroup := sync.WaitGroup{}
+	str := string(value)
 
-	updateWordMap := func(words []string) {
-		for ix := range words {
-			word := words[ix]
-			mutex.Lock()
-			wordMap[word] = wordMap[word] + 1
-			mutex.Unlock()
-		}
+	words := strings.FieldsFunc(str, func(r rune) bool {
+		return !unicode.IsDigit(r) && !unicode.IsLetter(r)
+	})
+
+	for ix := range words {
+		word := words[ix]
+		wordMap[word] = wordMap[word] + 1
 	}
 
-	for ix := range value {
-		waitGroup.Add(1)
-		bytes := value[ix]
-
-		go func(bytes []byte) {
-			line := string(bytes)
-
-			words := strings.FieldsFunc(line, func(r rune) bool {
-				return !unicode.IsDigit(r) && !unicode.IsLetter(r)
-			})
-
-			updateWordMap(words)
-			waitGroup.Done()
-		}(bytes)
-	}
-
-	waitGroup.Wait()
 	results := make([]*mrutil.KeyValue, 0)
 
 	for key := range wordMap {

@@ -24,7 +24,9 @@ func CheckTask(t *Task) {
 }
 
 func checkParams(params *Params) *Params {
-	if params.MasterRegisterMethod == "" {
+	if params.JobCapacity == 0 ||
+		params.MasterAddress == "" ||
+		params.MasterRegisterMethod == "" {
 		panic("Invalid parameters")
 	}
 
@@ -36,7 +38,9 @@ func checkParams(params *Params) *Params {
 }
 
 func checkWorker(worker *worker) {
-	if worker.errCh == nil || worker.shutdownCh == nil {
+	if worker.capacityCh == nil ||
+		worker.errCh == nil ||
+		worker.shutdownCh == nil {
 		panic("Invalid setup")
 	}
 }

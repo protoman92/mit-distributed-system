@@ -28,6 +28,12 @@ func (w *worker) loopJobRequest() {
 }
 
 func (w *worker) handleJobRequest(r *JobRequest) error {
+	defer func() {
+		// Take a look at the code for register loop for the other side of this
+		// channel.
+		<-w.capacityCh
+	}()
+
 	switch r.Type {
 	case mrutil.Map:
 		return w.doMap(r)

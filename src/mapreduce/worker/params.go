@@ -11,6 +11,7 @@ import (
 type Params struct {
 	RPCParams            rpchandler.Params
 	LogMan               util.LogMan
+	JobCapacity          uint
 	MasterAddress        string
 	MasterRegisterMethod string
 }

@@ -1,6 +1,7 @@
 package master
 
 import (
+	"github.com/protoman92/gocompose/pkg"
 	"github.com/protoman92/mit-distributed-system/src/rpcutil"
 
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
@@ -36,9 +37,13 @@ func (m *master) loopWorker() {
 				task.Status = mrutil.InProgress
 				task.Worker = w
 
+				updateTask := func() error {
+					return m.State.UpdateOrAddTasks(task)
+				}
+
 				// If we fail to update/add the task (to in-progress), refresh state
 				// to redeposit idle tasks.
-				if err := m.State.UpdateOrAddTasks(task); err != nil {
+				if err := compose.Retry(updateTask, m.RPCParams.RetryCount)(); err != nil {
 					task.Status = mrutil.Idle
 					task.Worker = mrutil.UnassignedWorker
 					m.State.NotifyIdleTasks(task)
@@ -56,15 +61,19 @@ func (m *master) loopWorker() {
 }
 
 func (m *master) assignWork(w string, task *worker.Task) error {
-	reply := &worker.JobReply{}
+	assignWork := func() error {
+		reply := &worker.JobReply{}
 
-	callParams := rpcutil.CallParams{
-		Args:    task.JobRequest,
-		Method:  "WkDelegate.AcceptJob",
-		Network: m.RPCParams.Network,
-		Reply:   reply,
-		Target:  w,
+		callParams := rpcutil.CallParams{
+			Args:    task.JobRequest,
+			Method:  "WkDelegate.AcceptJob",
+			Network: m.RPCParams.Network,
+			Reply:   reply,
+			Target:  w,
+		}
+
+		return rpcutil.Call(callParams)
 	}
 
-	return rpcutil.Call(callParams)
+	return compose.Retry(assignWork, m.RPCParams.RetryCount)()
 }

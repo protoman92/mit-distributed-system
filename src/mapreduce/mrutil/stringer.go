@@ -1,5 +1,11 @@
 package mrutil
 
+import "fmt"
+
+func (kv *KeyValue) String() string {
+	return fmt.Sprintf("Key %s, value length %d", kv.Key, len(kv.Value))
+}
+
 func (t TaskStatus) String() string {
 	switch t {
 	case Idle:

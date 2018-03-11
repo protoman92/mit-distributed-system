@@ -20,9 +20,13 @@ import (
 )
 
 const (
+	mapFunc       = mapper.MapWordCountFn
 	masterAddress = "master"
 	network       = "unix"
 	workerAddress = "worker"
+	log           = false
+	retryCount    = 10
+	waitTime      = time.Duration(15e9)
 )
 
 func sendJobRequest() {
@@ -48,7 +52,7 @@ func sendJobRequest() {
 
 	request := &master.JobRequest{
 		FilePaths:     filePaths,
-		MapFuncName:   mapper.MapWordCountFn,
+		MapFuncName:   mapFunc,
 		MapOpCount:    10,
 		ReduceOpCount: 10,
 		Type:          mrutil.Map,
@@ -96,7 +100,7 @@ func loopWorkerError(w worker.Worker) {
 
 func main() {
 	os.Remove(masterAddress)
-	logMan := util.NewLogMan(util.LogManParams{Log: false})
+	logMan := util.NewLogMan(util.LogManParams{Log: log})
 
 	master := master.NewMaster(master.Params{
 		LogMan:        logMan,
@@ -104,9 +108,10 @@ func main() {
 		RetryDuration: 1e5,
 		State:         localstate.NewLocalState(),
 		RPCParams: rpchandler.Params{
-			Address: masterAddress,
-			LogMan:  logMan,
-			Network: network,
+			Address:    masterAddress,
+			LogMan:     logMan,
+			Network:    network,
+			RetryCount: retryCount,
 		},
 	})
 
@@ -116,12 +121,14 @@ func main() {
 
 		worker := worker.NewWorker(worker.Params{
 			LogMan:               logMan,
+			JobCapacity:          1,
 			MasterAddress:        masterAddress,
 			MasterRegisterMethod: "MstDelegate.RegisterWorker",
 			RPCParams: rpchandler.Params{
-				Address: wkAddress,
-				LogMan:  logMan,
-				Network: network,
+				Address:    wkAddress,
+				LogMan:     logMan,
+				Network:    network,
+				RetryCount: retryCount,
 			},
 		})
 
@@ -131,7 +138,7 @@ func main() {
 	go loopMasterError(master)
 
 	sendJobRequest()
-	time.Sleep(5e9)
+	time.Sleep(waitTime)
 	sendShutdownRequest()
 	<-master.ShutdownChannel()
 }

@@ -4,9 +4,10 @@ import "github.com/protoman92/mit-distributed-system/src/util"
 
 // Params represents the required parameters to build a Handler.
 type Params struct {
-	Address string
-	LogMan  util.LogMan
-	Network string
+	Address    string
+	LogMan     util.LogMan
+	Network    string
+	RetryCount uint
 }
 
 // ShutdownRequest represents the required parameters for a shutdown request.

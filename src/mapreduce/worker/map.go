@@ -4,47 +4,77 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"strings"
+	"sync"
+
+	"github.com/protoman92/gocompose/pkg"
 
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mapper"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 )
 
 func (w *worker) doMap(r *JobRequest) error {
-	file, err := os.Open(r.FilePath)
+	doMap := func() error {
+		file, err := os.Open(r.FilePath)
 
-	if err != nil {
-		return err
-	}
+		if err != nil {
+			return err
+		}
 
-	defer file.Close()
-	fInfo, err := file.Stat()
+		defer file.Close()
+		fInfo, err := file.Stat()
 
-	if err != nil {
-		return err
-	}
+		if err != nil {
+			return err
+		}
 
-	size := fInfo.Size()
-	chunkSize := size / int64(r.MapOpCount)
-	intermediate := make([][]byte, 0)
-	intermediateSize := int64(0)
-	scanner := bufio.NewScanner(file)
+		size := fInfo.Size()
+		chunkSize := size/int64(r.MapOpCount) + 1
+		intermediate := ""
+		intermediateSize := int64(0)
+		scanner := bufio.NewScanner(file)
+		mapErrorCh := make(chan error, r.MapOpCount)
+		waitGroup := sync.WaitGroup{}
 
-	for scanner.Scan() {
-		bytes := scanner.Bytes()
-		intermediateSize += int64(len(bytes))
-		intermediate = append(intermediate, bytes)
+		processIntermediate := func(intermediate string) {
+			waitGroup.Add(1)
 
-		if intermediateSize >= chunkSize {
 			go func() {
-				w.handleMapResults(r, w.mapFunction(r)(r.FilePath, intermediate))
-			}()
+				results := w.mapFunction(r)(r.FilePath, []byte(intermediate))
 
-			intermediate = make([][]byte, 0)
-			intermediateSize = 0
+				if err := w.handleMapResults(r, results); err != nil {
+					mapErrorCh <- err
+				}
+
+				waitGroup.Done()
+			}()
+		}
+
+		for scanner.Scan() {
+			text := scanner.Text()
+			intermediateSize += int64(len(text))
+			intermediate = strings.Join([]string{intermediate, text}, "\n")
+
+			if intermediateSize >= chunkSize {
+				processIntermediate(intermediate)
+				intermediate = ""
+				intermediateSize = 0
+			}
+		}
+
+		processIntermediate(intermediate)
+		waitGroup.Wait()
+
+		select {
+		case err := <-mapErrorCh:
+			return err
+
+		default:
+			return nil
 		}
 	}
 
-	return nil
+	return compose.Retry(doMap, w.RPCParams.RetryCount)()
 }
 
 func (w *worker) mapFunction(r *JobRequest) mapper.MapFunc {
@@ -52,45 +82,50 @@ func (w *worker) mapFunction(r *JobRequest) mapper.MapFunc {
 	case mapper.MapWordCountFn:
 		return mapper.MapWordCount
 
+	case mapper.MapNoopFn:
+		return mapper.MapNoop
+
 	default:
 		panic("Unsupported operation")
 	}
 }
 
-func (w *worker) handleMapResults(r *JobRequest, kvs []*mrutil.KeyValue) {
-	files := make([]*os.File, 0)
-	encoders := make([]*json.Encoder, 0)
+func (w *worker) handleMapResults(r *JobRequest, kvs []*mrutil.KeyValue) error {
+	handleResults := func() error {
+		files := make([]*os.File, 0)
+		encoders := make([]*json.Encoder, 0)
 
-	defer func() {
-		for ix := range files {
-			files[ix].Close()
+		defer func() {
+			for ix := range files {
+				files[ix].Close()
+			}
+		}()
+
+		for i := 0; i < int(r.ReduceOpCount); i++ {
+			fName := w.reduceFilePath(r.FilePath, i)
+			file, err := os.Create(fName)
+
+			if err != nil {
+				return err
+			}
+
+			encoder := json.NewEncoder(file)
+			files = append(files, file)
+			encoders = append(encoders, encoder)
 		}
-	}()
 
-	for i := 0; i < int(r.ReduceOpCount); i++ {
-		fName := w.reduceFilePath(r.FilePath, i)
-		file, err := os.Create(fName)
+		for ix := range kvs {
+			kv := kvs[ix]
+			fileIndex := int(w.hash(kv.Key) % uint32(r.ReduceOpCount))
+			encoder := encoders[fileIndex]
 
-		if err != nil {
-			// Retry repeatedly.
-			w.handleMapResults(r, kvs)
-			return
+			if err := encoder.Encode(kv); err != nil {
+				return err
+			}
 		}
 
-		encoder := json.NewEncoder(file)
-		files = append(files, file)
-		encoders = append(encoders, encoder)
+		return nil
 	}
 
-	for ix := range kvs {
-		kv := kvs[ix]
-		fileIndex := int(w.hash(kv.Key) % uint32(r.ReduceOpCount))
-		encoder := encoders[fileIndex]
-
-		if err := encoder.Encode(kv); err != nil {
-			// Retry repeatedly.
-			w.handleMapResults(r, kvs)
-			return
-		}
-	}
+	return compose.Retry(handleResults, w.RPCParams.RetryCount)()
 }

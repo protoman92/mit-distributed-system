@@ -1,6 +1,7 @@
 package master
 
 import (
+	"github.com/protoman92/gocompose/pkg"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
@@ -22,7 +23,12 @@ func (m *master) loopJobRequest() {
 		case result := <-m.delegate.jobRequestCh:
 			m.LogMan.Printf("%v: received job %v\n", m, result.request)
 			tasks := m.createTasks(result.request)
-			err := m.State.RegisterTasks(tasks...)
+
+			registerTask := func() error {
+				return m.State.RegisterTasks(tasks...)
+			}
+
+			err := compose.Retry(registerTask, m.RPCParams.RetryCount)()
 			result.errCh <- err
 		}
 	}

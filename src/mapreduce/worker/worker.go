@@ -13,6 +13,7 @@ type worker struct {
 	*Params
 	delegate   *WkDelegate
 	rpcHandler rpchandler.Handler
+	capacityCh chan interface{}
 	errCh      chan error
 	shutdownCh chan interface{}
 }
@@ -27,14 +28,15 @@ func NewWorker(params Params) Worker {
 		Params:     checked,
 		delegate:   delegate,
 		rpcHandler: rpchandler.NewHandler(checked.RPCParams, delegate),
+		capacityCh: make(chan interface{}, params.JobCapacity),
 		errCh:      make(chan error, 0),
 		shutdownCh: make(chan interface{}, 0),
 	}
 
 	checkWorker(w)
-	go w.registerWithMaster()
 	go w.loopError()
 	go w.loopJobRequest()
+	go w.loopRegister()
 	go w.loopShutdown()
 	return w
 }
