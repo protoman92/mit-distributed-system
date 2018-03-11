@@ -6,6 +6,10 @@ import (
 	"github.com/protoman92/mit-distributed-system/src/rpcutil/rpchandler"
 )
 
+func (m *master) ShutdownChannel() <-chan interface{} {
+	return m.shutdownCh
+}
+
 func (m *master) shutdown() {
 	// Repeatedly send shutdown events until all loops have been cleaned up.
 	go func() {

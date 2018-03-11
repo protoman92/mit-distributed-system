@@ -20,7 +20,12 @@ func (m *master) loopRegister() {
 			return
 
 		case result := <-m.delegate.registerWorkerCh:
-			m.workerQueueCh <- result.Request.WorkerAddress
+			// This is in a goroutine because the worker queue loop waits for idle
+			// task one-by-one before accepting new workers.
+			go func() {
+				m.workerQueueCh <- result.Request.WorkerAddress
+			}()
+
 			m.registerWorker(result.Request.WorkerAddress)
 			result.ErrCh <- nil
 		}

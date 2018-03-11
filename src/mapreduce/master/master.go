@@ -10,6 +10,7 @@ import (
 // distributes them to workers.
 type Master interface {
 	ErrorChannel() <-chan error
+	ShutdownChannel() <-chan interface{}
 }
 
 type master struct {

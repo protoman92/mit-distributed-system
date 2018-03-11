@@ -71,7 +71,7 @@ func loopMasterError(m master.Master) {
 	for {
 		select {
 		case err := <-m.ErrorChannel():
-			fmt.Println(reflect.TypeOf(err), ":", err)
+			fmt.Println("Master error:", reflect.TypeOf(err), ":", err)
 		}
 	}
 }
@@ -80,19 +80,20 @@ func loopWorkerError(w worker.Worker) {
 	for {
 		select {
 		case err := <-w.ErrorChannel():
-			fmt.Println(reflect.TypeOf(err), ":", err)
+			fmt.Println("Worker error:", reflect.TypeOf(err), ":", err)
 		}
 	}
 }
 
 func main() {
 	os.Remove(masterAddress)
-	logMan := util.NewLogMan(util.LogManParams{Log: true})
+	logMan := util.NewLogMan(util.LogManParams{Log: false})
 
 	master := master.NewMaster(master.Params{
-		LogMan:     logMan,
-		PingPeriod: 3e9,
-		State:      localstate.NewLocalState(),
+		LogMan:        logMan,
+		PingPeriod:    3e9,
+		RetryDuration: 1e5,
+		State:         localstate.NewLocalState(),
 		RPCParams: rpchandler.Params{
 			Address: masterAddress,
 			LogMan:  logMan,
@@ -123,5 +124,5 @@ func main() {
 	sendJobRequest()
 	time.Sleep(5e9)
 	sendShutdownRequest()
-	select {}
+	<-master.ShutdownChannel()
 }

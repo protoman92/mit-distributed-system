@@ -3,7 +3,7 @@ package master
 import "github.com/protoman92/mit-distributed-system/src/util"
 
 func checkParams(params *Params) *Params {
-	if params.PingPeriod == 0 || params.State == nil {
+	if params.PingPeriod == 0 || params.RetryDuration == 0 || params.State == nil {
 		panic("Invalid parameters")
 	}
 

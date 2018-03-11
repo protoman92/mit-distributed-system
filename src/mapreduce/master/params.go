@@ -12,10 +12,11 @@ import (
 
 // Params represents the required parameters to build a Master.
 type Params struct {
-	RPCParams  rpchandler.Params
-	LogMan     util.LogMan
-	PingPeriod time.Duration
-	State      masterstate.State
+	RPCParams     rpchandler.Params
+	LogMan        util.LogMan
+	PingPeriod    time.Duration
+	RetryDuration time.Duration
+	State         masterstate.State
 }
 
 // JobRequest represents job request sent to a master.

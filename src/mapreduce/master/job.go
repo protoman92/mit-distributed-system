@@ -1,8 +1,6 @@
 package master
 
 import (
-	"fmt"
-
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
@@ -25,7 +23,6 @@ func (m *master) loopJobRequest() {
 			m.LogMan.Printf("%v: received job %v\n", m, result.request)
 			tasks := m.createTasks(result.request)
 			err := m.State.RegisterTasks(tasks...)
-			fmt.Println(m.State)
 			result.errCh <- err
 		}
 	}
@@ -36,8 +33,9 @@ func (m *master) createTasks(request *JobRequest) []*worker.Task {
 
 	for ix := range request.FilePaths {
 		r := &worker.JobRequest{
-			FilePath: request.FilePaths[ix],
-			Type:     request.Type,
+			FilePath:  request.FilePaths[ix],
+			JobNumber: uint(ix + 1),
+			Type:      request.Type,
 		}
 
 		worker.CheckJobRequest(r)

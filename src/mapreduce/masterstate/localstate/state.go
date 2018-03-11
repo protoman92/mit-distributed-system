@@ -1,50 +1,106 @@
 package localstate
 
 import (
+	"sync"
+
 	"github.com/protoman92/gocontainer/pkg/gocollection"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/masterstate"
-	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
 
 type localState struct {
+	mutex    *sync.RWMutex
 	taskList gocollection.List
+	idleCh   chan *worker.Task
 }
 
 // NewLocalState returns a new LocalState.
 func NewLocalState() masterstate.State {
 	list := gocollection.NewDefaultSliceList()
-	concurrent := gocollection.NewLockConcurrentList(list)
-	return &localState{taskList: concurrent}
+
+	return &localState{
+		mutex:    &sync.RWMutex{},
+		taskList: list,
+		idleCh:   make(chan *worker.Task),
+	}
 }
 
-func (s *localState) IdleTasks() ([]*worker.Task, error) {
-	elements := s.taskList.GetAllFunc(func(e interface{}) bool {
-		if e, ok := e.(*worker.Task); ok && e.Status == mrutil.Idle {
-			return true
-		}
+func (s *localState) IdleTaskChannel() chan *worker.Task {
+	return s.idleCh
+}
 
-		return false
-	})
-
-	tasks := make([]*worker.Task, 0)
-
-	for ix := range elements {
-		if e, ok := elements[ix].(*worker.Task); ok {
-			tasks = append(tasks, e)
-		}
+func (s *localState) NotifyIdleTasks(tasks ...*worker.Task) {
+	for ix := range tasks {
+		go func(task *worker.Task) {
+			s.idleCh <- task
+		}(tasks[ix])
 	}
+}
 
-	return tasks, nil
+func (s *localState) Refresh() {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	s.refresh()
 }
 
 func (s *localState) RegisterTasks(tasks ...*worker.Task) error {
 	elements := make([]interface{}, len(tasks))
 
 	for ix := range tasks {
-		elements[ix] = tasks[ix]
+		task := tasks[ix]
+		elements[ix] = task
+
+		if task.IsIdle() {
+			go func() {
+				s.idleCh <- task
+			}()
+		}
 	}
 
+	s.mutex.Lock()
 	s.taskList.AddAll(elements...)
+	s.refresh()
+	s.mutex.Unlock()
 	return nil
+}
+
+func (s *localState) UpdateOrAddTasks(tasks ...*worker.Task) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	for ix := range tasks {
+		task := tasks[ix]
+
+		if ix, _, found := s.taskList.IndexOfFunc(func(ix int, e interface{}) bool {
+			if e, ok := e.(*worker.Task); ok && e.JobRequest == task.JobRequest {
+				return true
+			}
+
+			return false
+		}); found && ix >= 0 {
+			s.taskList.SetAt(ix, task)
+		} else {
+			s.taskList.Add(task)
+		}
+	}
+
+	return nil
+}
+
+func (s *localState) refresh() {
+	tasks := s.taskList.GetAllFunc(func(e interface{}) bool {
+		if e, ok := e.(*worker.Task); ok && e.IsIdle() {
+			return true
+		}
+
+		return false
+	})
+
+	for ix := range tasks {
+		go func(task interface{}) {
+			if task, ok := task.(*worker.Task); ok {
+				s.idleCh <- task
+			}
+		}(tasks[ix])
+	}
 }

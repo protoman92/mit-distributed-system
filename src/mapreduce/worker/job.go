@@ -15,7 +15,7 @@ func (w *worker) loopJobRequest() {
 			return
 
 		case result := <-w.delegate.jobCh:
-			w.LogMan.Printf("%v: received job request %v", w, result.request)
+			w.LogMan.Printf("%v: received job request %v\n", w, result.request)
 			result.errCh <- nil
 		}
 	}

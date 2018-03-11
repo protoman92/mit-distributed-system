@@ -7,7 +7,7 @@ import (
 
 // CheckJobRequest checks the validity of a JobRequest.
 func CheckJobRequest(r *JobRequest) {
-	if r.FilePath == "" || r.Type == mrutil.TaskType(0) {
+	if r.FilePath == "" || r.JobNumber == 0 || r.Type == mrutil.TaskType(0) {
 		panic("Invalid parameters")
 	}
 }
@@ -24,7 +24,7 @@ func checkParams(params *Params) *Params {
 		panic("Invalid parameters")
 	}
 
-	if params.LogMan != nil {
+	if params.LogMan == nil {
 		params.LogMan = util.NewLogMan(util.LogManParams{Log: true})
 	}
 
