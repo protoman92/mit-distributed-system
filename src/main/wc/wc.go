@@ -88,7 +88,8 @@ func main() {
 	logMan := util.NewLogMan(util.LogManParams{Log: true})
 
 	master := master.NewMaster(master.Params{
-		LogMan: logMan,
+		LogMan:     logMan,
+		PingPeriod: 3e9,
 		RPCParams: rpchandler.Params{
 			Address: masterAddress,
 			LogMan:  logMan,
@@ -96,7 +97,7 @@ func main() {
 		},
 	})
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 5; i++ {
 		wkAddress := fmt.Sprintf("%s-%d", workerAddress, i)
 		os.Remove(wkAddress)
 
@@ -117,7 +118,7 @@ func main() {
 	go loopMasterError(master)
 
 	sendJobRequest()
-	time.Sleep(2e9)
+	time.Sleep(5e9)
 	sendShutdownRequest()
 	select {}
 }

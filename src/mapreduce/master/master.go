@@ -18,6 +18,7 @@ type master struct {
 	mutex      *sync.RWMutex
 	rpcHandler rpchandler.Handler
 	workers    []string
+	shutdownCh chan interface{}
 	errCh      chan error
 }
 
@@ -32,8 +33,9 @@ func NewMaster(params Params) Master {
 		delegate:   delegate,
 		mutex:      &sync.RWMutex{},
 		rpcHandler: rpchandler.NewHandler(checked.RPCParams, delegate),
-		errCh:      make(chan error, 0),
 		workers:    make([]string, 0),
+		errCh:      make(chan error, 0),
+		shutdownCh: make(chan interface{}, 0),
 	}
 
 	checkMaster(master)

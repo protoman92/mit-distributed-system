@@ -15,6 +15,7 @@ func (m *master) registerWorker(w string) {
 
 	if !existing {
 		m.LogMan.Printf("%v: adding new worker %s\n", m, w)
+		go m.loopPing(w)
 		m.mutex.Lock()
 		defer m.mutex.Unlock()
 		m.workers = append(m.workers, w)

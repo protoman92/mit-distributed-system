@@ -14,6 +14,10 @@ func (d *MstDelegate) RegisterWorker(request *worker.RegisterRequest, reply *wor
 func (m *master) loopRegister() {
 	for {
 		select {
+		case <-m.shutdownCh:
+			m.LogMan.Printf("%v: shutting down registration.\n", m)
+			return
+
 		case result := <-m.delegate.registerWorkerCh:
 			m.registerWorker(result.Request.WorkerAddress)
 			result.ErrCh <- nil

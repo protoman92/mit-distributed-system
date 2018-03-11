@@ -15,9 +15,13 @@ func checkParams(params *Params) *Params {
 }
 
 func checkWorker(worker *worker) {
-	if worker.errCh == nil {
+	if worker.errCh == nil || worker.shutdownCh == nil {
 		panic("Invalid setup")
 	}
 }
 
-func checkDelegate(delegate *WkDelegate) {}
+func checkDelegate(delegate *WkDelegate) {
+	if delegate.jobCh == nil {
+		panic("Invalid setup")
+	}
+}

@@ -10,6 +10,10 @@ func (d *MstDelegate) AcceptJob(request *JobRequest, reply *JobReply) error {
 func (m *master) loopJobRequest() {
 	for {
 		select {
+		case <-m.shutdownCh:
+			m.LogMan.Printf("%v: shutting down job queue.\n", m)
+			return
+
 		case result := <-m.delegate.jobRequestCh:
 			m.LogMan.Printf("%v: received job %v\n", m, result.request)
 			result.errCh <- nil

@@ -1,6 +1,23 @@
 package worker
 
-func (w *worker) shutdown() {}
+import (
+	"time"
+)
+
+func (w *worker) shutdown() {
+	go func() {
+		for {
+			select {
+			case w.shutdownCh <- true:
+				continue
+
+			case <-time.After(time.Second):
+				w.LogMan.Printf("%v: finished shutting down all processes.\n", w)
+				return
+			}
+		}
+	}()
+}
 
 func (w *worker) loopShutdown() {
 	for {

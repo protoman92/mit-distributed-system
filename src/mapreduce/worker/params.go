@@ -14,10 +14,26 @@ type Params struct {
 }
 
 // JobRequest represents a Map/Reduce job request.
-type JobRequest struct{}
+type JobRequest struct {
+	FilePath string
+}
 
 // JobReply represents a reply to a job request.
 type JobReply struct{}
+
+// JobCallResult represents the result of a job request invocation.
+type JobCallResult struct {
+	request *JobRequest
+	errCh   chan error
+}
+
+// PingRequest represents a ping request to notify the master of activity.
+type PingRequest struct{}
+
+// PingReply represents the result of a ping request.
+type PingReply struct {
+	OK bool
+}
 
 // RegisterRequest represents a register request from a worker.
 type RegisterRequest struct {
