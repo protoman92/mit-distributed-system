@@ -27,13 +27,13 @@ func (m *master) ping(w string) {
 
 	callParams := rpcutil.CallParams{
 		Args:    args,
-		Method:  "WkDelegate.Ping",
+		Method:  m.WorkerPingMethod,
 		Network: m.RPCParams.Network,
 		Reply:   reply,
 		Target:  w,
 	}
 
-	if err := rpcutil.Call(callParams); err != nil || !reply.OK {
+	if err := m.rpcHandler.Call(callParams); err != nil || !reply.OK {
 		m.LogMan.Printf("%v: worker %s timed out (error %v)\n", m, w, err)
 	} else {
 		m.LogMan.Printf("%v: received response from worker %s\n", m, w)

@@ -2,6 +2,7 @@ package localstate
 
 import (
 	"sync"
+	"time"
 
 	"github.com/protoman92/gocontainer/pkg/gocollection"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/masterstate"
@@ -9,70 +10,33 @@ import (
 )
 
 type localState struct {
+	*Params
 	mutex    *sync.RWMutex
 	taskList gocollection.List
-	idleCh   chan *worker.Task
 }
 
-// NewLocalState returns a new LocalState.
-func NewLocalState() masterstate.State {
-	list := gocollection.NewDefaultSliceList()
-
-	return &localState{
-		mutex:    &sync.RWMutex{},
-		taskList: list,
-		idleCh:   make(chan *worker.Task),
-	}
-}
-
-func (s *localState) IdleTaskChannel() chan *worker.Task {
-	return s.idleCh
-}
-
-func (s *localState) NotifyIdleTasks(tasks ...*worker.Task) {
-	for ix := range tasks {
-		go func(task *worker.Task) {
-			s.idleCh <- task
-		}(tasks[ix])
-	}
-}
-
-func (s *localState) Refresh() {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-	s.refresh()
-}
-
-func (s *localState) RegisterTasks(tasks ...*worker.Task) error {
-	elements := make([]interface{}, len(tasks))
-
-	for ix := range tasks {
-		task := tasks[ix]
-		elements[ix] = task
-
-		if task.IsIdle() {
-			go func() {
-				s.idleCh <- task
-			}()
+func (s *localState) firstIdleTask() (worker.Task, bool, error) {
+	_, first, _ := s.taskList.GetFirstFunc(func(ix int, e interface{}) bool {
+		if e, ok := e.(worker.Task); ok && e.IsIdle() {
+			return true
 		}
+
+		return false
+	})
+
+	if e, ok := first.(worker.Task); ok {
+		return e, true, nil
 	}
 
-	s.mutex.Lock()
-	s.taskList.AddAll(elements...)
-	s.refresh()
-	s.mutex.Unlock()
-	return nil
+	return worker.Task{}, false, nil
 }
 
-func (s *localState) UpdateOrAddTasks(tasks ...*worker.Task) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
+func (s *localState) updateOrAddTasks(tasks ...worker.Task) error {
 	for ix := range tasks {
 		task := tasks[ix]
 
 		if ix, _, found := s.taskList.IndexOfFunc(func(ix int, e interface{}) bool {
-			if e, ok := e.(*worker.Task); ok && e.JobRequest == task.JobRequest {
+			if e, ok := e.(worker.Task); ok && e.JobRequest.ID == task.JobRequest.ID {
 				return true
 			}
 
@@ -87,20 +51,27 @@ func (s *localState) UpdateOrAddTasks(tasks ...*worker.Task) error {
 	return nil
 }
 
-func (s *localState) refresh() {
-	tasks := s.taskList.GetAllFunc(func(e interface{}) bool {
-		if e, ok := e.(*worker.Task); ok && e.IsIdle() {
-			return true
-		}
+func (s *localState) FirstIdleTask() (worker.Task, bool, error) {
+	time.Sleep(s.Latency)
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.firstIdleTask()
+}
 
-		return false
-	})
+func (s *localState) UpdateOrAddTasks(tasks ...worker.Task) error {
+	time.Sleep(s.Latency)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return s.updateOrAddTasks(tasks...)
+}
 
-	for ix := range tasks {
-		go func(task interface{}) {
-			if task, ok := task.(*worker.Task); ok {
-				s.idleCh <- task
-			}
-		}(tasks[ix])
+// NewLocalState returns a new LocalState.
+func NewLocalState(params Params) masterstate.State {
+	list := gocollection.NewDefaultSliceList()
+
+	return &localState{
+		Params:   &params,
+		mutex:    &sync.RWMutex{},
+		taskList: list,
 	}
 }

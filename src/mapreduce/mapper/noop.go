@@ -10,6 +10,6 @@ const (
 )
 
 // MapNoop does nothing.
-func MapNoop(key string, value []byte) []*mrutil.KeyValue {
-	return []*mrutil.KeyValue{&mrutil.KeyValue{Key: key, Value: string(value)}}
+func MapNoop(key string, value []byte) []mrutil.KeyValue {
+	return []mrutil.KeyValue{mrutil.KeyValue{Key: key, Value: string(value)}}
 }

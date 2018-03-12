@@ -1,13 +1,18 @@
 package rpchandler
 
-import "github.com/protoman92/mit-distributed-system/src/util"
+import (
+	compose "github.com/protoman92/gocompose/pkg"
+	"github.com/protoman92/mit-distributed-system/src/rpcutil"
+	"github.com/protoman92/mit-distributed-system/src/util"
+)
 
 // Params represents the required parameters to build a Handler.
 type Params struct {
-	Address    string
-	LogMan     util.LogMan
-	Network    string
-	RetryCount uint
+	Address        string
+	Caller         rpcutil.Caller
+	LogMan         util.LogMan
+	Network        string
+	RetryWithDelay compose.ErrorTransformFunc
 }
 
 // ShutdownRequest represents the required parameters for a shutdown request.
@@ -18,6 +23,6 @@ type ShutdownReply struct{}
 
 // ShutdownCallResult represents the result of a shutdown request transmission.
 type ShutdownCallResult struct {
-	request *ShutdownRequest
+	request ShutdownRequest
 	errCh   chan error
 }

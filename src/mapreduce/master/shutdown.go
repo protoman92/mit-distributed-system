@@ -2,8 +2,6 @@ package master
 
 import (
 	"time"
-
-	"github.com/protoman92/mit-distributed-system/src/rpcutil/rpchandler"
 )
 
 func (m *master) ShutdownChannel() <-chan interface{} {
@@ -38,7 +36,7 @@ func (m *master) shutdown() {
 func (m *master) shutdownWorker(workerAddress string) {
 	m.LogMan.Printf("%v: shutting down worker %s\n", m, workerAddress)
 
-	if err := rpchandler.Shutdown(m.RPCParams.Network, workerAddress); err != nil {
+	if err := m.rpcHandler.Shutdown(m.RPCParams.Network, workerAddress); err != nil {
 		go func() {
 			m.errCh <- err
 		}()

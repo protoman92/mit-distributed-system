@@ -8,9 +8,6 @@ import (
 // A State object abstracts away key-value get/set implementations, so we can
 // have local State or remote State with database access.
 type State interface {
-	IdleTaskChannel() chan *worker.Task
-	NotifyIdleTasks(tasks ...*worker.Task)
-	Refresh()
-	RegisterTasks(tasks ...*worker.Task) error
-	UpdateOrAddTasks(tasks ...*worker.Task) error
+	FirstIdleTask() (worker.Task, bool, error)
+	UpdateOrAddTasks(tasks ...worker.Task) error
 }

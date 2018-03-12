@@ -1,8 +1,6 @@
 package rpchandler
 
-import (
-	"github.com/protoman92/mit-distributed-system/src/rpcutil"
-)
+import "github.com/protoman92/mit-distributed-system/src/rpcutil"
 
 // Shutdown sends a shutdown request to a target using a common shutdown RPC
 // method.

@@ -6,9 +6,9 @@ import (
 
 // RegisterWorker registers a worker. This method may be invoke several times
 // to notify the master that some worker is ready for more tasks.
-func (d *MstDelegate) RegisterWorker(request *worker.RegisterRequest, reply *worker.ResigterReply) error {
+func (d *MstDelegate) RegisterWorker(request worker.RegisterRequest, reply *worker.ResigterReply) error {
 	resultCh := make(chan error, 0)
-	d.registerWorkerCh <- &worker.RegisterCallResult{Request: request, ErrCh: resultCh}
+	d.registerWorkerCh <- worker.RegisterCallResult{Request: request, ErrCh: resultCh}
 	return <-resultCh
 }
 
@@ -16,7 +16,6 @@ func (m *master) loopRegister() {
 	for {
 		select {
 		case <-m.shutdownCh:
-			m.LogMan.Printf("%v: shutting down registration.\n", m)
 			return
 
 		case result := <-m.delegate.registerWorkerCh:

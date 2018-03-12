@@ -1,6 +1,9 @@
 package mrutil
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 func (kv *KeyValue) String() string {
 	return fmt.Sprintf("Key %s, value length %d", kv.Key, len(kv.Value))
@@ -18,7 +21,7 @@ func (t TaskStatus) String() string {
 		return "Completed"
 
 	default:
-		panic("Invalid task status")
+		return strconv.Itoa(int(t))
 	}
 }
 
@@ -31,6 +34,6 @@ func (t TaskType) String() string {
 		return "Reduce"
 
 	default:
-		panic("Invalid task type")
+		return strconv.Itoa(int(t))
 	}
 }

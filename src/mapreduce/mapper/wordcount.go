@@ -14,7 +14,7 @@ const (
 )
 
 // MapWordCount maps on word count.
-func MapWordCount(key string, value []byte) []*mrutil.KeyValue {
+func MapWordCount(key string, value []byte) []mrutil.KeyValue {
 	wordMap := make(map[string]int, 0)
 	str := string(value)
 
@@ -27,10 +27,10 @@ func MapWordCount(key string, value []byte) []*mrutil.KeyValue {
 		wordMap[word] = wordMap[word] + 1
 	}
 
-	results := make([]*mrutil.KeyValue, 0)
+	results := make([]mrutil.KeyValue, 0)
 
 	for key := range wordMap {
-		kv := &mrutil.KeyValue{Key: key, Value: strconv.Itoa(wordMap[key])}
+		kv := mrutil.KeyValue{Key: key, Value: strconv.Itoa(wordMap[key])}
 		results = append(results, kv)
 	}
 

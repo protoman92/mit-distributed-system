@@ -3,8 +3,6 @@ package rpchandler
 import (
 	"net"
 	"net/rpc"
-
-	compose "github.com/protoman92/gocompose/pkg"
 )
 
 func (h *handler) startRPCServer(delegate interface{}) {
@@ -46,9 +44,7 @@ func (h *handler) startRPCServer(delegate interface{}) {
 		return nil
 	}
 
-	if err := compose.Retry(startServer, h.RetryCount)(); err != nil {
-		go func() {
-			h.errCh <- err
-		}()
+	if err := h.RetryWithDelay(startServer)(); err != nil {
+		h.errCh <- err
 	}
 }

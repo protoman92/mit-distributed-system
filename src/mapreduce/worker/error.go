@@ -13,7 +13,6 @@ func (w *worker) loopError() {
 	for {
 		select {
 		case <-w.shutdownCh:
-			w.LogMan.Printf("%v: shutting down error loop.\n", w)
 			return
 
 		case err := <-w.rpcHandler.ErrorChannel():

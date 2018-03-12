@@ -6,8 +6,9 @@ import (
 )
 
 // CheckJobRequest checks the validity of a JobRequest.
-func CheckJobRequest(r *JobRequest) {
+func CheckJobRequest(r JobRequest) {
 	if r.FilePath == "" ||
+		r.ID == "" ||
 		r.MapFuncName == "" ||
 		r.MapOpCount == 0 ||
 		r.ReduceOpCount == 0 ||
@@ -17,15 +18,17 @@ func CheckJobRequest(r *JobRequest) {
 }
 
 // CheckTask checks the validity of a task.
-func CheckTask(t *Task) {
+func CheckTask(t Task) {
 	if t.Status == mrutil.TaskStatus(0) || t.Worker == "" {
 		panic("Invalid parameters")
 	}
 }
 
 func checkParams(params *Params) *Params {
-	if params.JobCapacity == 0 ||
+	if params.FileAccessor == nil ||
+		params.JobCapacity == 0 ||
 		params.MasterAddress == "" ||
+		params.MasterCompleteJobMethod == "" ||
 		params.MasterRegisterMethod == "" {
 		panic("Invalid parameters")
 	}
@@ -40,6 +43,7 @@ func checkParams(params *Params) *Params {
 func checkWorker(worker *worker) {
 	if worker.capacityCh == nil ||
 		worker.errCh == nil ||
+		worker.jobQueueCh == nil ||
 		worker.shutdownCh == nil {
 		panic("Invalid setup")
 	}

@@ -12,6 +12,9 @@ func (e *Error) Error() string {
 func (m *master) loopError() {
 	for {
 		select {
+		case <-m.shutdownCh:
+			return
+
 		case err := <-m.rpcHandler.ErrorChannel():
 			m.errCh <- &Error{Original: err}
 		}

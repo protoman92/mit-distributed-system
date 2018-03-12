@@ -1,15 +1,16 @@
 package master
 
 import (
-	"github.com/protoman92/gocompose/pkg"
+	"fmt"
+
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
 
 // AcceptJob accepts a job request.
-func (d *MstDelegate) AcceptJob(request *JobRequest, reply *JobReply) error {
+func (d *MstDelegate) AcceptJob(request JobRequest, reply *JobReply) error {
 	resultCh := make(chan error, 0)
-	d.jobRequestCh <- &JobCallResult{request: request, errCh: resultCh}
+	d.jobRequestCh <- JobCallResult{request: request, errCh: resultCh}
 	return <-resultCh
 }
 
@@ -17,7 +18,6 @@ func (m *master) loopJobRequest() {
 	for {
 		select {
 		case <-m.shutdownCh:
-			m.LogMan.Printf("%v: shutting down job queue.\n", m)
 			return
 
 		case result := <-m.delegate.jobRequestCh:
@@ -25,21 +25,25 @@ func (m *master) loopJobRequest() {
 			tasks := m.createTasks(result.request)
 
 			registerTask := func() error {
-				return m.State.RegisterTasks(tasks...)
+				return m.State.UpdateOrAddTasks(tasks...)
 			}
 
-			err := compose.Retry(registerTask, m.RPCParams.RetryCount)()
+			err := m.RPCParams.RetryWithDelay(registerTask)()
 			result.errCh <- err
 		}
 	}
 }
 
-func (m *master) createTasks(request *JobRequest) []*worker.Task {
-	tasks := make([]*worker.Task, 0)
+func (m *master) createTasks(request JobRequest) []worker.Task {
+	tasks := make([]worker.Task, 0)
 
 	for ix := range request.FilePaths {
-		r := &worker.JobRequest{
-			FilePath:      request.FilePaths[ix],
+		path := request.FilePaths[ix]
+		id := m.formatJobID(path, request.Type)
+
+		r := worker.JobRequest{
+			FilePath:      path,
+			ID:            id,
 			MapFuncName:   request.MapFuncName,
 			MapOpCount:    request.MapOpCount,
 			ReduceOpCount: request.ReduceOpCount,
@@ -48,7 +52,7 @@ func (m *master) createTasks(request *JobRequest) []*worker.Task {
 
 		worker.CheckJobRequest(r)
 
-		task := &worker.Task{
+		task := worker.Task{
 			JobRequest: r,
 			Status:     mrutil.Idle,
 			Worker:     mrutil.UnassignedWorker,
@@ -59,4 +63,8 @@ func (m *master) createTasks(request *JobRequest) []*worker.Task {
 	}
 
 	return tasks
+}
+
+func (m *master) formatJobID(path string, tType mrutil.TaskType) string {
+	return fmt.Sprintf("%s-%s", tType, path)
 }

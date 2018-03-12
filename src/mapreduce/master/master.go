@@ -38,11 +38,12 @@ func NewMaster(params Params) Master {
 		workers:       make([]string, 0),
 		errCh:         make(chan error, 0),
 		shutdownCh:    make(chan interface{}, 0),
-		workerQueueCh: make(chan string, 0),
+		workerQueueCh: make(chan string, params.ExpectedWorkerCount),
 	}
 
 	checkMaster(master)
 	go master.loopError()
+	go master.loopJobCompletion()
 	go master.loopJobRequest()
 	go master.loopRegister()
 	go master.loopShutdown()

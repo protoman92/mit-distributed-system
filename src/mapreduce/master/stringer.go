@@ -9,6 +9,6 @@ func (m *master) String() string {
 	return "Master"
 }
 
-func (r *JobRequest) String() string {
+func (r JobRequest) String() string {
 	return fmt.Sprintf("Job request:\n %s", strings.Join(r.FilePaths, "\n"))
 }

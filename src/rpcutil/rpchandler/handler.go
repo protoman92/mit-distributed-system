@@ -3,10 +3,14 @@ package rpchandler
 import (
 	"net"
 	"sync"
+
+	"github.com/protoman92/mit-distributed-system/src/rpcutil"
 )
 
 // Handler represents a RPC handler.
 type Handler interface {
+	rpcutil.Caller
+	Shutdown(network, address string) error
 	ErrorChannel() <-chan error
 	ShutdownChannel() <-chan interface{}
 }
@@ -35,7 +39,7 @@ func NewHandler(params Params, delegate interface{}) Handler {
 	}
 
 	checkHandler(handler)
-	handler.startRPCServer(delegate)
+	go handler.startRPCServer(delegate)
 	go handler.loopShutdown()
 	return handler
 }

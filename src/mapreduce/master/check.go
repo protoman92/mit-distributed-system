@@ -3,7 +3,7 @@ package master
 import "github.com/protoman92/mit-distributed-system/src/util"
 
 // CheckJobRequest checks the validity of a JobRequest.
-func CheckJobRequest(r *JobRequest) {
+func CheckJobRequest(r JobRequest) {
 	if r.FilePaths == nil ||
 		r.MapFuncName == "" ||
 		r.MapOpCount == 0 ||
@@ -14,9 +14,12 @@ func CheckJobRequest(r *JobRequest) {
 }
 
 func checkParams(params *Params) *Params {
-	if params.PingPeriod == 0 ||
+	if params.ExpectedWorkerCount == 0 ||
+		params.PingPeriod == 0 ||
 		params.RetryDuration == 0 ||
-		params.State == nil {
+		params.State == nil ||
+		params.WorkerAcceptJobMethod == "" ||
+		params.WorkerPingMethod == "" {
 		panic("Invalid parameters")
 	}
 
@@ -38,7 +41,9 @@ func checkMaster(master *master) {
 }
 
 func checkDelegate(d *MstDelegate) {
-	if d.jobRequestCh == nil || d.registerWorkerCh == nil {
+	if d.jobCompleteCh == nil ||
+		d.jobRequestCh == nil ||
+		d.registerWorkerCh == nil {
 		panic("Invalid delegate")
 	}
 }

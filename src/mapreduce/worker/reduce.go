@@ -10,3 +10,7 @@ func (w *worker) reduceFilePath(filePath string, jobNumber int) string {
 	newName := fmt.Sprintf("reduce-%d-%s", jobNumber, file)
 	return path.Join(dir, newName)
 }
+
+func (w *worker) doReduce(r JobRequest) error {
+	return nil
+}

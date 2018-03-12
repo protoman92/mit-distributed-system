@@ -3,7 +3,10 @@ package rpchandler
 import "github.com/protoman92/mit-distributed-system/src/util"
 
 func checkParams(params *Params) *Params {
-	if params.Address == "" || params.Network == "" || params.RetryCount == 0 {
+	if params.Address == "" ||
+		params.Caller == nil ||
+		params.Network == "" ||
+		params.RetryWithDelay == nil {
 		panic("Invalid parameters")
 	}
 

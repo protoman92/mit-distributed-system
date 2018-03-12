@@ -7,10 +7,13 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/protoman92/gocompose/pkg"
+
 	"github.com/protoman92/mit-distributed-system/src/rpcutil/rpchandler"
 
 	"github.com/protoman92/mit-distributed-system/src/rpcutil"
 
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/fileaccessor/localaccessor"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mapper"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/master"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/masterstate/localstate"
@@ -21,11 +24,15 @@ import (
 
 const (
 	mapFunc       = mapper.MapWordCountFn
+	mapOpCount    = 10
 	masterAddress = "master"
 	network       = "unix"
 	workerAddress = "worker"
 	log           = false
 	retryCount    = 10
+	retryDelay    = time.Duration(1e9)
+	reduceOpCount = 10
+	stateLatency  = time.Duration(1e9)
 	waitTime      = time.Duration(15e9)
 )
 
@@ -50,11 +57,11 @@ func sendJobRequest() {
 		filePaths = append(filePaths, path.Join(fileDir, fileNames[ix]))
 	}
 
-	request := &master.JobRequest{
+	request := master.JobRequest{
 		FilePaths:     filePaths,
 		MapFuncName:   mapFunc,
-		MapOpCount:    10,
-		ReduceOpCount: 10,
+		MapOpCount:    mapOpCount,
+		ReduceOpCount: reduceOpCount,
 		Type:          mrutil.Map,
 	}
 
@@ -103,16 +110,22 @@ func main() {
 	logMan := util.NewLogMan(util.LogManParams{Log: log})
 
 	master := master.NewMaster(master.Params{
-		LogMan:        logMan,
-		PingPeriod:    3e9,
-		RetryDuration: 1e5,
-		State:         localstate.NewLocalState(),
+		LogMan:                logMan,
+		ExpectedWorkerCount:   10000,
+		PingPeriod:            3e9,
+		RetryDuration:         1e5,
+		WorkerAcceptJobMethod: "WkDelegate.AcceptJob",
+		WorkerPingMethod:      "WkDelegate.Ping",
 		RPCParams: rpchandler.Params{
-			Address:    masterAddress,
-			LogMan:     logMan,
-			Network:    network,
-			RetryCount: retryCount,
+			Address:        masterAddress,
+			Caller:         rpcutil.NewCaller(),
+			LogMan:         logMan,
+			Network:        network,
+			RetryWithDelay: compose.RetryWithDelay(retryCount)(retryDelay),
 		},
+		State: localstate.NewLocalState(localstate.Params{
+			Latency: stateLatency,
+		}),
 	})
 
 	for i := 0; i < 5; i++ {
@@ -120,15 +133,18 @@ func main() {
 		os.Remove(wkAddress)
 
 		worker := worker.NewWorker(worker.Params{
-			LogMan:               logMan,
-			JobCapacity:          1,
-			MasterAddress:        masterAddress,
-			MasterRegisterMethod: "MstDelegate.RegisterWorker",
+			FileAccessor:            localaccessor.NewLocalFileAccessor(),
+			LogMan:                  logMan,
+			JobCapacity:             1,
+			MasterAddress:           masterAddress,
+			MasterCompleteJobMethod: "MstDelegate.CompleteJob",
+			MasterRegisterMethod:    "MstDelegate.RegisterWorker",
 			RPCParams: rpchandler.Params{
-				Address:    wkAddress,
-				LogMan:     logMan,
-				Network:    network,
-				RetryCount: retryCount,
+				Address:        wkAddress,
+				Caller:         rpcutil.NewCaller(),
+				LogMan:         logMan,
+				Network:        network,
+				RetryWithDelay: compose.RetryWithDelay(retryCount)(retryDelay),
 			},
 		})
 
