@@ -2,19 +2,19 @@ package mrutil
 
 const (
 	// Idle means the task is ready to be handled off.
-	Idle TaskStatus = 1
+	Idle JobStatus = 1
 
 	// InProgress means the task is being performed.
-	InProgress TaskStatus = 2
+	InProgress JobStatus = 2
 
 	// Completed means the task is completed.
-	Completed TaskStatus = 3
+	Completed JobStatus = 3
 
 	// Map represents the Map task type.
-	Map TaskType = 1
+	Map JobType = 1
 
 	// Reduce represents the Reduce task type.
-	Reduce TaskType = 2
+	Reduce JobType = 2
 
 	// UnassignedWorker means that a task has yet to be assigned to any worker.
 	UnassignedWorker = "UNASSIGNED"
@@ -26,8 +26,20 @@ type KeyValue struct {
 	Value string
 }
 
-// TaskStatus represents a task's completion status.
-type TaskStatus uint
+// JobStatus represents a task's completion status.
+type JobStatus uint
 
-// TaskType represents a task's type (Map or Reduce).
-type TaskType uint
+// JobType represents a task's type (Map or Reduce).
+type JobType uint
+
+// MapFunc represents a Map function.
+type MapFunc func(string, []byte) []KeyValue
+
+// MapFuncName represents a MapFunc name.
+type MapFuncName string
+
+// ReduceFunc represents a Reduce function.
+type ReduceFunc func(string, []string) KeyValue
+
+// ReduceFuncName represents a ReduceFunc name.
+type ReduceFuncName string

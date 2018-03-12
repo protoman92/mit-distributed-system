@@ -1,13 +1,17 @@
 package masterstate
 
 import (
-	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/job"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 )
 
-// State represents a master's mutable state, in which it keeps task information.
+// StateJobMap stores the jobs and their current statuses.
+type StateJobMap = map[job.WorkerJobRequest]mrutil.JobStatus
+
+// State represents a master's mutable state, in which it keeps job information.
 // A State object abstracts away key-value get/set implementations, so we can
 // have local State or remote State with database access.
 type State interface {
-	FirstIdleTask() (worker.Task, bool, error)
-	UpdateOrAddTasks(tasks ...worker.Task) error
+	FirstIdleJob() (job.WorkerJobRequest, bool, error)
+	UpdateOrAddJobs(jobs StateJobMap) error
 }

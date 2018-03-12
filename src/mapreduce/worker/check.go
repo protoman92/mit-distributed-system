@@ -1,35 +1,16 @@
 package worker
 
 import (
-	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 	"github.com/protoman92/mit-distributed-system/src/util"
 )
 
-// CheckJobRequest checks the validity of a JobRequest.
-func CheckJobRequest(r JobRequest) {
-	if r.FilePath == "" ||
-		r.ID == "" ||
-		r.MapFuncName == "" ||
-		r.MapOpCount == 0 ||
-		r.ReduceOpCount == 0 ||
-		r.Type == mrutil.TaskType(0) {
-		panic("Invalid parameters")
-	}
-}
-
-// CheckTask checks the validity of a task.
-func CheckTask(t Task) {
-	if t.Status == mrutil.TaskStatus(0) || t.Worker == "" {
-		panic("Invalid parameters")
-	}
-}
-
 func checkParams(params *Params) *Params {
-	if params.FileAccessor == nil ||
-		params.JobCapacity == 0 ||
+	if params.JobCapacity == 0 ||
+		params.Mapper == nil ||
 		params.MasterAddress == "" ||
 		params.MasterCompleteJobMethod == "" ||
-		params.MasterRegisterMethod == "" {
+		params.MasterRegisterMethod == "" ||
+		params.Reducer == nil {
 		panic("Invalid parameters")
 	}
 

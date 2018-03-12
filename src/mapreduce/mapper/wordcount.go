@@ -10,7 +10,7 @@ import (
 
 const (
 	// MapWordCountFn is the name for the MapWordCount function.
-	MapWordCountFn MapFuncName = "MapWordCount"
+	MapWordCountFn mrutil.MapFuncName = "MapWordCount"
 )
 
 // MapWordCount maps on word count.

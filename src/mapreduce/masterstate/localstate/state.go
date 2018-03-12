@@ -4,74 +4,61 @@ import (
 	"sync"
 	"time"
 
-	"github.com/protoman92/gocontainer/pkg/gocollection"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/job"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
+
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/masterstate"
-	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
 
 type localState struct {
 	*Params
-	mutex    *sync.RWMutex
-	taskList gocollection.List
+	mutex  *sync.RWMutex
+	jobs   []job.WorkerJobRequest
+	status map[string]mrutil.JobStatus
 }
 
-func (s *localState) firstIdleTask() (worker.Task, bool, error) {
-	_, first, _ := s.taskList.GetFirstFunc(func(ix int, e interface{}) bool {
-		if e, ok := e.(worker.Task); ok && e.IsIdle() {
-			return true
+func (s *localState) firstIdleJob() (job.WorkerJobRequest, bool, error) {
+	for ix := range s.jobs {
+		if s.status[s.jobs[ix].UID()] == mrutil.Idle {
+			return s.jobs[ix], true, nil
 		}
-
-		return false
-	})
-
-	if e, ok := first.(worker.Task); ok {
-		return e, true, nil
 	}
 
-	return worker.Task{}, false, nil
+	return job.WorkerJobRequest{}, false, nil
 }
 
-func (s *localState) updateOrAddTasks(tasks ...worker.Task) error {
-	for ix := range tasks {
-		task := tasks[ix]
+func (s *localState) FirstIdleJob() (job.WorkerJobRequest, bool, error) {
+	time.Sleep(s.Latency)
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.firstIdleJob()
+}
 
-		if ix, _, found := s.taskList.IndexOfFunc(func(ix int, e interface{}) bool {
-			if e, ok := e.(worker.Task); ok && e.JobRequest.ID == task.JobRequest.ID {
-				return true
-			}
-
-			return false
-		}); found && ix >= 0 {
-			s.taskList.SetAt(ix, task)
-		} else {
-			s.taskList.Add(task)
+func (s *localState) updateOrAddJobs(jobs masterstate.StateJobMap) error {
+	for job := range jobs {
+		if _, found := s.status[job.UID()]; !found {
+			s.jobs = append(s.jobs, job)
 		}
+
+		s.status[job.UID()] = jobs[job]
 	}
 
 	return nil
 }
 
-func (s *localState) FirstIdleTask() (worker.Task, bool, error) {
-	time.Sleep(s.Latency)
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-	return s.firstIdleTask()
-}
-
-func (s *localState) UpdateOrAddTasks(tasks ...worker.Task) error {
+func (s *localState) UpdateOrAddJobs(jobs masterstate.StateJobMap) error {
 	time.Sleep(s.Latency)
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	return s.updateOrAddTasks(tasks...)
+	return s.updateOrAddJobs(jobs)
 }
 
 // NewLocalState returns a new LocalState.
 func NewLocalState(params Params) masterstate.State {
-	list := gocollection.NewDefaultSliceList()
-
 	return &localState{
-		Params:   &params,
-		mutex:    &sync.RWMutex{},
-		taskList: list,
+		Params: &params,
+		mutex:  &sync.RWMutex{},
+		jobs:   make([]job.WorkerJobRequest, 0),
+		status: make(map[string]mrutil.JobStatus),
 	}
 }

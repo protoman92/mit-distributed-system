@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/job"
 	"github.com/protoman92/mit-distributed-system/src/rpcutil/rpchandler"
 )
 
@@ -15,7 +16,7 @@ type worker struct {
 	rpcHandler rpchandler.Handler
 	capacityCh chan interface{}
 	errCh      chan error
-	jobQueueCh chan JobRequest
+	jobQueueCh chan job.WorkerJobRequest
 	shutdownCh chan interface{}
 }
 
@@ -31,7 +32,7 @@ func NewWorker(params Params) Worker {
 		rpcHandler: rpchandler.NewHandler(checked.RPCParams, delegate),
 		capacityCh: make(chan interface{}, params.JobCapacity),
 		errCh:      make(chan error, 0),
-		jobQueueCh: make(chan JobRequest),
+		jobQueueCh: make(chan job.WorkerJobRequest),
 		shutdownCh: make(chan interface{}, 0),
 	}
 

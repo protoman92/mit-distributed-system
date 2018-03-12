@@ -4,6 +4,5 @@ package fileaccessor
 // remote files during a Reduce process, but if we are running the entire
 // MapReduce in a single machine, a local file accessor would suffice.
 type FileAccessor interface {
-	FormatURI(path string) string
-	AccessFile(uri string, fn func([]byte)) error
+	AccessFile(uri string, fn func([]byte) error) error
 }

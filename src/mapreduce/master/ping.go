@@ -11,7 +11,6 @@ func (m *master) loopPing(w string) {
 	for {
 		select {
 		case <-m.shutdownCh:
-			m.LogMan.Printf("%v: shutting down ping for worker %s.\n", m, w)
 			return
 
 		case <-time.After(m.PingPeriod):

@@ -34,8 +34,6 @@ func (m *master) shutdown() {
 }
 
 func (m *master) shutdownWorker(workerAddress string) {
-	m.LogMan.Printf("%v: shutting down worker %s\n", m, workerAddress)
-
 	if err := m.rpcHandler.Shutdown(m.RPCParams.Network, workerAddress); err != nil {
 		go func() {
 			m.errCh <- err

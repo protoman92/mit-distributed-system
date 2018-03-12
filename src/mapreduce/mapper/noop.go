@@ -6,7 +6,7 @@ import (
 
 const (
 	// MapNoopFn represents a no-op map function.
-	MapNoopFn = "Noop"
+	MapNoopFn mrutil.MapFuncName = "Noop"
 )
 
 // MapNoop does nothing.

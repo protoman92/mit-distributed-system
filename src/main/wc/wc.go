@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path"
 	"reflect"
 	"time"
+
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/fileaccessor/localaccessor"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/reducer"
 
 	"github.com/protoman92/gocompose/pkg"
 
@@ -13,7 +17,7 @@ import (
 
 	"github.com/protoman92/mit-distributed-system/src/rpcutil"
 
-	"github.com/protoman92/mit-distributed-system/src/mapreduce/fileaccessor/localaccessor"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/job"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mapper"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/master"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/masterstate/localstate"
@@ -24,16 +28,23 @@ import (
 
 const (
 	mapFunc       = mapper.MapWordCountFn
-	mapOpCount    = 10
+	mapOpCount    = 3
 	masterAddress = "master"
 	network       = "unix"
 	workerAddress = "worker"
 	log           = false
+	pingPeriod    = 100e9
 	retryCount    = 10
 	retryDelay    = time.Duration(1e9)
-	reduceOpCount = 10
+	reduceFunc    = reducer.ReduceSumFn
+	reduceOpCount = 3
 	stateLatency  = time.Duration(1e9)
 	waitTime      = time.Duration(15e9)
+	workerCount   = 1
+)
+
+var (
+	retryFunc = compose.RetryWithDelay(retryCount)(retryDelay)
 )
 
 func sendJobRequest() {
@@ -57,16 +68,19 @@ func sendJobRequest() {
 		filePaths = append(filePaths, path.Join(fileDir, fileNames[ix]))
 	}
 
-	request := master.JobRequest{
-		FilePaths:     filePaths,
-		MapFuncName:   mapFunc,
-		MapOpCount:    mapOpCount,
-		ReduceOpCount: reduceOpCount,
-		Type:          mrutil.Map,
+	splitInputFiles(filePaths)
+
+	request := job.MasterJobRequest{
+		FilePaths:      filePaths,
+		MapFuncName:    mapFunc,
+		MapOpCount:     mapOpCount,
+		ReduceFuncName: reduceFunc,
+		ReduceOpCount:  reduceOpCount,
+		Type:           mrutil.Map,
 	}
 
 	reply := &master.JobReply{}
-	master.CheckJobRequest(request)
+	job.CheckMasterJobRequest(request)
 
 	callParams := rpcutil.CallParams{
 		Args:    request,
@@ -84,6 +98,25 @@ func sendJobRequest() {
 func sendShutdownRequest() {
 	if err := rpchandler.Shutdown(network, masterAddress); err != nil {
 		panic(err)
+	}
+}
+
+func splitInputFiles(filePaths []string) {
+	for ix := range filePaths {
+		fp := filePaths[ix]
+
+		util.SplitFile(fp, mapOpCount, func(chunk uint, data []byte) {
+			outputFile := mrutil.MapFileName(fp, chunk)
+			file, err := os.Create(outputFile)
+
+			if err != nil {
+				panic(err)
+			}
+
+			defer file.Close()
+			writer := bufio.NewWriter(file)
+			writer.Write(data)
+		})
 	}
 }
 
@@ -112,7 +145,7 @@ func main() {
 	master := master.NewMaster(master.Params{
 		LogMan:                logMan,
 		ExpectedWorkerCount:   10000,
-		PingPeriod:            3e9,
+		PingPeriod:            pingPeriod,
 		RetryDuration:         1e5,
 		WorkerAcceptJobMethod: "WkDelegate.AcceptJob",
 		WorkerPingMethod:      "WkDelegate.Ping",
@@ -121,30 +154,36 @@ func main() {
 			Caller:         rpcutil.NewCaller(),
 			LogMan:         logMan,
 			Network:        network,
-			RetryWithDelay: compose.RetryWithDelay(retryCount)(retryDelay),
+			RetryWithDelay: retryFunc,
 		},
 		State: localstate.NewLocalState(localstate.Params{
 			Latency: stateLatency,
 		}),
 	})
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < workerCount; i++ {
 		wkAddress := fmt.Sprintf("%s-%d", workerAddress, i)
 		os.Remove(wkAddress)
 
 		worker := worker.NewWorker(worker.Params{
-			FileAccessor:            localaccessor.NewLocalFileAccessor(),
 			LogMan:                  logMan,
 			JobCapacity:             1,
 			MasterAddress:           masterAddress,
 			MasterCompleteJobMethod: "MstDelegate.CompleteJob",
 			MasterRegisterMethod:    "MstDelegate.RegisterWorker",
+			Mapper: mapper.NewMapper(mapper.Params{
+				RetryWithDelay: retryFunc,
+			}),
+			Reducer: reducer.NewReducer(reducer.Params{
+				FileAccessor:   localaccessor.NewLocalFileAccessor(),
+				RetryWithDelay: retryFunc,
+			}),
 			RPCParams: rpchandler.Params{
 				Address:        wkAddress,
 				Caller:         rpcutil.NewCaller(),
 				LogMan:         logMan,
 				Network:        network,
-				RetryWithDelay: compose.RetryWithDelay(retryCount)(retryDelay),
+				RetryWithDelay: retryFunc,
 			},
 		})
 
@@ -153,6 +192,7 @@ func main() {
 
 	go loopMasterError(master)
 
+	time.Sleep(time.Second)
 	sendJobRequest()
 	time.Sleep(waitTime)
 	sendShutdownRequest()

@@ -26,7 +26,6 @@ func (h *handler) loopShutdown() {
 	for {
 		select {
 		case result := <-h.delegate.shutdownCh:
-			h.LogMan.Printf("%v: shutting down RPC server for %s.\n", h, h.Address)
 			h.shutdown()
 			result.errCh <- nil
 			return

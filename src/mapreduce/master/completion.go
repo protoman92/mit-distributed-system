@@ -1,14 +1,16 @@
 package master
 
 import (
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/job"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/masterstate"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
 
-// CompleteJob completes a job request and initiates a new job if required.
-func (d *MstDelegate) CompleteJob(task worker.Task, reply *worker.TaskReply) error {
+// CompleteJob completes a request and initiates a new request if required.
+func (d *MstDelegate) CompleteJob(request job.WorkerJobRequest, reply *worker.JobReply) error {
 	resultCh := make(chan error, 0)
-	d.jobCompleteCh <- worker.TaskCallResult{Task: task, ErrCh: resultCh}
+	d.jobCompleteCh <- worker.JobCallResult{Request: request, ErrCh: resultCh}
 	return <-resultCh
 }
 
@@ -20,7 +22,7 @@ func (m *master) loopJobCompletion() {
 
 		case result := <-m.delegate.jobCompleteCh:
 			handleCompletion := func() error {
-				return m.handleJobCompletion(result.Task)
+				return m.handleJobCompletion(result.Request)
 			}
 
 			err := m.RPCParams.RetryWithDelay(handleCompletion)()
@@ -29,21 +31,17 @@ func (m *master) loopJobCompletion() {
 	}
 }
 
-func (m *master) handleJobCompletion(t worker.Task) error {
+func (m *master) handleJobCompletion(t job.WorkerJobRequest) error {
+	update := make(masterstate.StateJobMap, 0)
+	update[t] = mrutil.Completed
+
 	switch t.Type {
 	case mrutil.Map:
-		newID := m.formatJobID(t.FilePath, mrutil.Reduce)
-		request := t.JobRequest.Clone()
-		request.ID = newID
+		request := t.Clone()
 		request.Type = mrutil.Reduce
-
-		newTask := worker.Task{
-			JobRequest: request,
-			Status:     mrutil.Idle,
-			Worker:     mrutil.UnassignedWorker,
-		}
-
-		return m.State.UpdateOrAddTasks(t, newTask)
+		request.Worker = mrutil.UnassignedWorker
+		update[request] = mrutil.Idle
+		return m.State.UpdateOrAddJobs(update)
 
 	default:
 		panic("Unsupported operation")

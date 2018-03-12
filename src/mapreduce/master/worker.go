@@ -3,6 +3,8 @@ package master
 import (
 	"github.com/protoman92/mit-distributed-system/src/rpcutil"
 
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/job"
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/masterstate"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/worker"
 )
@@ -21,18 +23,18 @@ func (m *master) loopWorker() {
 		case w = <-workerQueueCh:
 			m.LogMan.Printf("%v: worker %s is ready to work.\n", m, w)
 			workerQueueCh = nil
-			var task worker.Task
+			var job job.WorkerJobRequest
 			var found bool
 
 			firstIdle := func() error {
-				t, f, err := m.State.FirstIdleTask()
-				task = t
+				t, f, err := m.State.FirstIdleJob()
+				job = t
 				found = f
 				return err
 			}
 
-			// If no idle task is found, requeue the worker; repeat until there is
-			// an idle task.
+			// If no idle job is found, requeue the worker; repeat until there is
+			// an idle job.
 			if err := m.RPCParams.RetryWithDelay(firstIdle)(); !found {
 				if err != nil {
 					m.errCh <- err
@@ -43,7 +45,7 @@ func (m *master) loopWorker() {
 			}
 
 			assignWork := func() error {
-				return m.assignWork(w, task)
+				return m.assignWork(w, job)
 			}
 
 			// If the master is unable to assign work to this worker (due to worker
@@ -54,20 +56,20 @@ func (m *master) loopWorker() {
 				break
 			}
 
-			cloned := task.Clone()
-			cloned.Status = mrutil.InProgress
+			cloned := job.Clone()
 			cloned.Worker = w
 
-			updateTask := func() error {
-				return m.State.UpdateOrAddTasks(cloned)
+			updateJob := func() error {
+				update := masterstate.StateJobMap{cloned: mrutil.InProgress}
+				return m.State.UpdateOrAddJobs(update)
 			}
 
-			// If we fail to update/add the task (to in-progress), do not requeue the
-			// worker, because it may be busy processing the task	we just assigned.
+			// If we fail to update/add the job (to in-progress), do not requeue the
+			// worker, because it may be busy processing the job	we just assigned.
 			// Unfortunately, we would not be able to use this worker's results to
 			// continue the process, because we are retrying the sequence until there
-			// are no errors (which means this task may be assigned to another worker).
-			if err := m.RPCParams.RetryWithDelay(updateTask)(); err != nil {
+			// are no errors (which means this job may be assigned to another worker).
+			if err := m.RPCParams.RetryWithDelay(updateJob)(); err != nil {
 				m.errCh <- err
 			}
 
@@ -83,11 +85,11 @@ func (m *master) loopWorker() {
 	}
 }
 
-func (m *master) assignWork(w string, task worker.Task) error {
+func (m *master) assignWork(w string, job job.WorkerJobRequest) error {
 	reply := &worker.JobReply{}
 
 	callParams := rpcutil.CallParams{
-		Args:    task.JobRequest,
+		Args:    job,
 		Method:  m.WorkerAcceptJobMethod,
 		Network: m.RPCParams.Network,
 		Reply:   reply,

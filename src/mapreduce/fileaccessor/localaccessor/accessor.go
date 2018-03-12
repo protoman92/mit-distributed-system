@@ -2,6 +2,7 @@ package localaccessor
 
 import (
 	"bufio"
+	"io"
 	"os"
 
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/fileaccessor"
@@ -9,11 +10,7 @@ import (
 
 type localAccessor struct{}
 
-func (a *localAccessor) FormatURI(path string) string {
-	return path
-}
-
-func (a *localAccessor) AccessFile(uri string, fn func([]byte)) error {
+func (a *localAccessor) AccessFile(uri string, fn func([]byte) error) error {
 	file, err := os.Open(uri)
 
 	if err != nil {
@@ -24,7 +21,9 @@ func (a *localAccessor) AccessFile(uri string, fn func([]byte)) error {
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
-		fn(scanner.Bytes())
+		if err := fn(scanner.Bytes()); err != nil && err != io.EOF {
+			return err
+		}
 	}
 
 	return nil

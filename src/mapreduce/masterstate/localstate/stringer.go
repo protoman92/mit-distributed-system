@@ -5,5 +5,5 @@ import (
 )
 
 func (s *localState) String() string {
-	return fmt.Sprint(s.taskList)
+	return fmt.Sprint(s.jobs)
 }

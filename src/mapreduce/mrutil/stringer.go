@@ -9,7 +9,7 @@ func (kv *KeyValue) String() string {
 	return fmt.Sprintf("Key %s, value length %d", kv.Key, len(kv.Value))
 }
 
-func (t TaskStatus) String() string {
+func (t JobStatus) String() string {
 	switch t {
 	case Idle:
 		return "Idle"
@@ -25,7 +25,7 @@ func (t TaskStatus) String() string {
 	}
 }
 
-func (t TaskType) String() string {
+func (t JobType) String() string {
 	switch t {
 	case Map:
 		return "Map"

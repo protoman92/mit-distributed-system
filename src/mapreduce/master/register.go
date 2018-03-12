@@ -5,7 +5,7 @@ import (
 )
 
 // RegisterWorker registers a worker. This method may be invoke several times
-// to notify the master that some worker is ready for more tasks.
+// to notify the master that some worker is ready for more jobs.
 func (d *MstDelegate) RegisterWorker(request worker.RegisterRequest, reply *worker.ResigterReply) error {
 	resultCh := make(chan error, 0)
 	d.registerWorkerCh <- worker.RegisterCallResult{Request: request, ErrCh: resultCh}
@@ -20,7 +20,7 @@ func (m *master) loopRegister() {
 
 		case result := <-m.delegate.registerWorkerCh:
 			// This is in a goroutine because the worker queue loop waits for idle
-			// task one-by-one before accepting new workers.
+			// jobs one-by-one before accepting new workers.
 			go func() {
 				m.workerQueueCh <- result.Request.WorkerAddress
 			}()
