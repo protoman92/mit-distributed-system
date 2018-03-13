@@ -2,11 +2,18 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/fileaccessor/localaccessor"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/reducer"
@@ -39,15 +46,17 @@ const (
 	reduceFunc    = reducer.ReduceSumFn
 	reduceOpCount = 3
 	stateLatency  = time.Duration(1e9)
+	topN          = 10
 	waitTime      = time.Duration(15e9)
-	workerCount   = 1
+	workerCount   = 5
 )
 
 var (
+	filePaths []string
 	retryFunc = compose.RetryWithDelay(retryCount)(retryDelay)
 )
 
-func sendJobRequest() {
+func init() {
 	fileNames := []string{
 		"kjv12.txt",
 		// "randomtext.txt",
@@ -60,7 +69,7 @@ func sendJobRequest() {
 		panic(err)
 	}
 
-	filePaths := make([]string, 0)
+	filePaths = make([]string, 0)
 	dir, _ := path.Split(wd)
 	fileDir := path.Join(dir, "textinput")
 
@@ -69,8 +78,134 @@ func sendJobRequest() {
 	}
 
 	splitInputFiles(filePaths)
+}
 
-	request := job.MasterJobRequest{
+func countWordsSingle(filePaths []string) {
+	kvm := make(map[string]int, 0)
+
+	for ix := range filePaths {
+		file, err := os.Open(filePaths[ix])
+
+		if err != nil {
+			panic(err)
+		}
+
+		contents, _ := ioutil.ReadAll(file)
+
+		if err != nil {
+			file.Close()
+			panic(err)
+		}
+
+		file.Close()
+
+		words := strings.FieldsFunc(string(contents), func(r rune) bool {
+			return !unicode.IsDigit(r) && !unicode.IsLetter(r)
+		})
+
+		for jx := range words {
+			word := words[jx]
+			kvm[word] = kvm[word] + 1
+		}
+	}
+
+	rankWordCount(kvm)
+}
+
+func mergeOutputFiles(filePaths []string) {
+	kvm := make(map[string]int, 0)
+
+	for ix := range filePaths {
+		for i := 0; i < reduceOpCount; i++ {
+			fp := mrutil.MergeFileName(filePaths[ix], uint(i))
+			file, err := os.Open(fp)
+
+			if err != nil {
+				panic(err)
+			}
+
+			decoder := json.NewDecoder(file)
+
+			for {
+				var kv mrutil.KeyValue
+				err := decoder.Decode(&kv)
+
+				if err != nil {
+					if err != io.EOF {
+						panic(err)
+					} else {
+						break
+					}
+				}
+
+				value, err := strconv.Atoi(kv.Value)
+
+				if err != nil {
+					panic(err)
+				}
+
+				kvm[kv.Key] = kvm[kv.Key] + value
+			}
+		}
+	}
+
+	rankWordCount(kvm)
+}
+
+func rankWordCount(kvm map[string]int) {
+	vkm := make(map[int][]string, 0)
+
+	for key := range kvm {
+		value := kvm[key]
+		keys, ok := vkm[value]
+
+		if !ok {
+			keys = make([]string, 0)
+		}
+
+		keys = append(keys, key)
+		vkm[value] = keys
+	}
+
+	values := make([]int, 0)
+
+	for k := range vkm {
+		values = append(values, k)
+	}
+
+	sort.Sort(sort.Reverse(sort.IntSlice(values)))
+	currentTop := 0
+	currentIndex := 0
+	topKV := make([]mrutil.KeyValue, 0)
+
+	for currentTop < topN {
+		value := values[currentIndex]
+		keys := vkm[value]
+
+		for ix := range keys {
+			currentTop++
+			kv := mrutil.KeyValue{Key: keys[ix], Value: strconv.Itoa(value)}
+			topKV = append(topKV, kv)
+		}
+
+		currentIndex++
+	}
+
+	for ix := range topKV {
+		fmt.Printf("Number %d: %v\n", ix+1, topKV[ix])
+	}
+
+	sum := 0
+
+	for ix := range values {
+		sum += values[ix]
+	}
+
+	fmt.Printf("Total word count: %d", sum)
+}
+
+func sendJobRequest() {
+	request := job.MasterJob{
 		FilePaths:      filePaths,
 		MapFuncName:    mapFunc,
 		MapOpCount:     mapOpCount,
@@ -80,7 +215,7 @@ func sendJobRequest() {
 	}
 
 	reply := &master.JobReply{}
-	job.CheckMasterJobRequest(request)
+	job.CheckMasterJob(request)
 
 	callParams := rpcutil.CallParams{
 		Args:    request,
@@ -105,18 +240,21 @@ func splitInputFiles(filePaths []string) {
 	for ix := range filePaths {
 		fp := filePaths[ix]
 
-		util.SplitFile(fp, mapOpCount, func(chunk uint, data []byte) {
+		if err := util.SplitFile(fp, mapOpCount, func(chunk uint, data []byte) error {
 			outputFile := mrutil.MapFileName(fp, chunk)
 			file, err := os.Create(outputFile)
 
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			defer file.Close()
 			writer := bufio.NewWriter(file)
-			writer.Write(data)
-		})
+			_, err1 := writer.Write(data)
+			return err1
+		}); err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -139,6 +277,13 @@ func loopWorkerError(w worker.Worker) {
 }
 
 func main() {
+	// go func() {
+	// 	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+	// 	fmt.Println("Single worker word count:")
+	// 	countWordsSingle(filePaths)
+	// 	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+	// }()
+
 	os.Remove(masterAddress)
 	logMan := util.NewLogMan(util.LogManParams{Log: log})
 
@@ -191,10 +336,30 @@ func main() {
 	}
 
 	go loopMasterError(master)
-
 	time.Sleep(time.Second)
 	sendJobRequest()
-	time.Sleep(waitTime)
+
+	doneCh := make(chan interface{}, 0)
+
+	go func() {
+		for i := 0; i < len(filePaths)*reduceOpCount; i++ {
+			<-master.CompletionChannel()
+		}
+
+		doneCh <- true
+	}()
+
+	select {
+	case <-doneCh:
+		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+		fmt.Println("MapReduce word count:")
+		mergeOutputFiles(filePaths)
+		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+
+	case <-time.After(waitTime):
+		fmt.Println("Expired")
+	}
+
 	sendShutdownRequest()
 	<-master.ShutdownChannel()
 }

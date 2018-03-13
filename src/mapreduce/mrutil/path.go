@@ -8,7 +8,7 @@ import (
 // MapFileName creates a file name for a Map operation.
 func MapFileName(fp string, mapNo uint) string {
 	dir, file := path.Split(fp)
-	newName := fmt.Sprintf("%d-%s", mapNo, file)
+	newName := fmt.Sprintf("M%d-%s", mapNo, file)
 	return path.Join(dir, newName)
 }
 
@@ -16,6 +16,13 @@ func MapFileName(fp string, mapNo uint) string {
 func ReduceFileName(fp string, mapNo uint, reduceNo uint) string {
 	mapName := MapFileName(fp, mapNo)
 	dir, file := path.Split(mapName)
-	newName := fmt.Sprintf("%d-%s", reduceNo, file)
+	newName := fmt.Sprintf("R%d-%s", reduceNo, file)
+	return path.Join(dir, newName)
+}
+
+// MergeFileName creates a file name for a Merge operation.
+func MergeFileName(fp string, reduceNo uint) string {
+	dir, file := path.Split(fp)
+	newName := fmt.Sprintf("result-%d-%s", reduceNo, file)
 	return path.Join(dir, newName)
 }

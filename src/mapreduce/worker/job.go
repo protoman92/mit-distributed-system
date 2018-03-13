@@ -11,7 +11,8 @@ import (
 
 // AcceptJob accepts a job request. If this worker machine does not have the
 // file specified by the job request, we should return an error.
-func (d *WkDelegate) AcceptJob(request job.WorkerJobRequest, reply *JobReply) error {
+func (d *WkDelegate) AcceptJob(request job.WorkerJob, reply *JobReply) error {
+	job.CheckWorkerJob(request)
 	resultCh := make(chan error, 0)
 	d.jobCh <- JobCallResult{Request: request, ErrCh: resultCh}
 	return <-resultCh
@@ -26,12 +27,16 @@ func (w *worker) loopJobReceipt() {
 		case result := <-w.delegate.jobCh:
 			w.LogMan.Printf("%v: received job request %v\n", w, result.Request)
 
-			if _, err := os.Stat(result.Request.FilePath); err != nil {
-				result.ErrCh <- err
-			} else {
-				w.jobQueueCh <- result.Request
-				result.ErrCh <- nil
+			// For a Map operation, the file must be available locally.
+			if result.Request.Type == mrutil.Map {
+				if _, err := os.Stat(result.Request.File); err != nil {
+					result.ErrCh <- err
+					break
+				}
 			}
+
+			w.jobQueueCh <- result.Request
+			result.ErrCh <- nil
 		}
 	}
 }
@@ -43,15 +48,14 @@ func (w *worker) loopJobRequest() {
 			return
 
 		case request := <-w.jobQueueCh:
+			fmt.Println(w, request.JobNumber, request.Type)
 			go func() {
 				handleJobRequest := func() error { return w.handleJobRequest(request) }
 
 				if err := w.RPCParams.RetryWithDelay(handleJobRequest)(); err != nil {
 					w.errCh <- err
 				} else {
-					completeJob := func() error {
-						return w.completeJobRequest(request)
-					}
+					completeJob := func() error { return w.completeJobRequest(request) }
 
 					if err1 := w.RPCParams.RetryWithDelay(completeJob)(); err1 != nil {
 						w.errCh <- err1
@@ -68,21 +72,21 @@ func (w *worker) loopJobRequest() {
 	}
 }
 
-func (w *worker) handleJobRequest(r job.WorkerJobRequest) error {
+func (w *worker) handleJobRequest(r job.WorkerJob) error {
 	switch r.Type {
 	case mrutil.Map:
 		return w.Mapper.DoMap(r)
 
 	case mrutil.Reduce:
 		return w.Reducer.DoReduce(r)
-
-	default:
-		panic(fmt.Sprintf("Invalid type %v", r.Type))
 	}
+
+	panic(fmt.Sprintf("Invalid type %v", r.Type))
 }
 
-func (w *worker) completeJobRequest(r job.WorkerJobRequest) error {
+func (w *worker) completeJobRequest(r job.WorkerJob) error {
 	cloned := r.Clone()
+	r.RemoteFileAddress = w.RPCParams.Address
 	reply := &JobReply{}
 
 	callParams := rpcutil.CallParams{

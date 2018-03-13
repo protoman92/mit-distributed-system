@@ -16,7 +16,7 @@ type worker struct {
 	rpcHandler rpchandler.Handler
 	capacityCh chan interface{}
 	errCh      chan error
-	jobQueueCh chan job.WorkerJobRequest
+	jobQueueCh chan job.WorkerJob
 	shutdownCh chan interface{}
 }
 
@@ -32,7 +32,7 @@ func NewWorker(params Params) Worker {
 		rpcHandler: rpchandler.NewHandler(checked.RPCParams, delegate),
 		capacityCh: make(chan interface{}, params.JobCapacity),
 		errCh:      make(chan error, 0),
-		jobQueueCh: make(chan job.WorkerJobRequest),
+		jobQueueCh: make(chan job.WorkerJob),
 		shutdownCh: make(chan interface{}, 0),
 	}
 

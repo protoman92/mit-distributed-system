@@ -26,6 +26,6 @@ type JobReply struct{}
 
 // JobCallResult represents the result of a job request transmission.
 type JobCallResult struct {
-	request job.MasterJobRequest
+	request job.MasterJob
 	errCh   chan error
 }

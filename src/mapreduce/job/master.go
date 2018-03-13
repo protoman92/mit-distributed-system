@@ -2,13 +2,12 @@ package job
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 )
 
-// MasterJobRequest represents job request sent to a master.
-type MasterJobRequest struct {
+// MasterJob represents job request sent to a master.
+type MasterJob struct {
 	FilePaths      []string
 	MapFuncName    mrutil.MapFuncName
 	MapOpCount     uint
@@ -17,42 +16,41 @@ type MasterJobRequest struct {
 	Type           mrutil.JobType
 }
 
-func (r MasterJobRequest) String() string {
-	return fmt.Sprintf("Job request:\n %s", strings.Join(r.FilePaths, "\n"))
-}
-
-// CheckMasterJobRequest checks the validity of a JobRequest.
-func CheckMasterJobRequest(r MasterJobRequest) {
+// CheckMasterJob checks the validity of a JobRequest.
+func CheckMasterJob(r MasterJob) {
 	if r.FilePaths == nil ||
 		r.MapFuncName == "" ||
 		r.MapOpCount == 0 ||
 		r.ReduceFuncName == "" ||
 		r.ReduceOpCount == 0 ||
 		r.Type == 0 {
+		fmt.Println(r)
 		panic("Invalid parameters")
 	}
 }
 
-// WorkerJobs creates worker jobs.
-func (r MasterJobRequest) WorkerJobs() []WorkerJobRequest {
-	requests := make([]WorkerJobRequest, 0)
+// MapJobs creates Map jobs.
+func (r MasterJob) MapJobs() []WorkerJob {
+	requests := make([]WorkerJob, 0)
 
 	for ix := range r.FilePaths {
 		path := r.FilePaths[ix]
 
-		request := WorkerJobRequest{
-			FilePath:       path,
-			JobNumber:      uint(ix),
-			MapFuncName:    r.MapFuncName,
-			MapOpCount:     r.MapOpCount,
-			ReduceFuncName: r.ReduceFuncName,
-			ReduceOpCount:  r.ReduceOpCount,
-			Type:           r.Type,
-			Worker:         mrutil.UnassignedWorker,
-		}
+		for jx := 0; jx < int(r.MapOpCount); jx++ {
+			request := WorkerJob{
+				File:              path,
+				JobNumber:         uint(jx),
+				MapOpCount:        r.MapOpCount,
+				MapFuncName:       r.MapFuncName,
+				ReduceFuncName:    r.ReduceFuncName,
+				ReduceOpCount:     r.ReduceOpCount,
+				RemoteFileAddress: mrutil.UnassignedWorker,
+				Type:              r.Type,
+				Worker:            mrutil.UnassignedWorker,
+			}
 
-		CheckWorkerJobRequest(request)
-		requests = append(requests, request)
+			requests = append(requests, request)
+		}
 	}
 
 	return requests

@@ -3,8 +3,9 @@ package reducer
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
+	"os"
+	"sync"
 
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/job"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
@@ -12,7 +13,7 @@ import (
 
 // Reducer represents an object that can perform Reduce.
 type Reducer interface {
-	DoReduce(r job.WorkerJobRequest) error
+	DoReduce(r job.WorkerJob) error
 }
 
 type reducePerformer struct {
@@ -23,12 +24,29 @@ type reducePerformer struct {
 // path included in the job request should have been formatted to include
 // URI information, and we need a special file accessor to retrieve the data
 // at this URI.
-func (rd *reducePerformer) DoReduce(r job.WorkerJobRequest) error {
-	kvMap := make(map[string][]string, 0)
+func (rd *reducePerformer) DoReduce(r job.WorkerJob) error {
+	doneCh := make(chan interface{}, 0)
+	reduceErrCh := make(chan error, 0)
+	waitGroup := sync.WaitGroup{}
 
+	mergeFP := mrutil.MergeFileName(r.File, r.JobNumber)
+	mergeFile, err := os.Create(mergeFP)
+
+	if err != nil {
+		return err
+	}
+
+	defer mergeFile.Close()
+	encoder := json.NewEncoder(mergeFile)
+
+	// Search for M files. These files may be on different localities, so the
+	// worst case scenario is that this worker has to make M network calls.
 	for i := 0; i < int(r.MapOpCount); i++ {
-		for j := 0; j < int(r.ReduceOpCount); j++ {
-			inputPath := mrutil.ReduceFileName(r.FilePath, uint(i), uint(j))
+		mapNo := uint(i)
+		waitGroup.Add(1)
+
+		go func() {
+			inputPath := mrutil.ReduceFileName(r.File, mapNo, r.JobNumber)
 
 			if err := rd.FileAccessor.AccessFile(inputPath, func(data []byte) error {
 				kvm, err := rd.mapKeyFromInput(r, data)
@@ -37,37 +55,44 @@ func (rd *reducePerformer) DoReduce(r job.WorkerJobRequest) error {
 					return err
 				}
 
+				results := make([]mrutil.KeyValue, 0)
+				reduceFn := rd.reduceFunction(r)
+
 				for key := range kvm {
-					values, ok := kvMap[key]
+					reduced := reduceFn(key, kvm[key])
+					results = append(results, reduced)
+				}
 
-					if !ok {
-						values = make([]string, 0)
+				for ix := range results {
+					if err := encoder.Encode(&results[ix]); err != nil {
+						return err
 					}
-
-					values = append(values, kvm[key]...)
-					kvMap[key] = values
 				}
 
 				return nil
 			}); err != nil {
-				return err
+				reduceErrCh <- err
+			} else {
+				waitGroup.Done()
 			}
-		}
+		}()
 	}
 
-	results := make([]mrutil.KeyValue, 0)
-	reduceFn := rd.reduceFunction(r)
+	go func() {
+		waitGroup.Wait()
+		doneCh <- true
+	}()
 
-	for key := range kvMap {
-		reduced := reduceFn(key, kvMap[key])
-		results = append(results, reduced)
+	select {
+	case err := <-reduceErrCh:
+		return err
+
+	case <-doneCh:
+		return nil
 	}
-
-	fmt.Println(results)
-	return nil
 }
 
-func (rd *reducePerformer) mapKeyFromInput(r job.WorkerJobRequest, data []byte) (map[string][]string, error) {
+func (rd *reducePerformer) mapKeyFromInput(r job.WorkerJob, data []byte) (map[string][]string, error) {
 	kvMap := make(map[string][]string, 0)
 	buffer := bytes.NewBuffer(data)
 	decoder := json.NewDecoder(buffer)
@@ -91,7 +116,7 @@ func (rd *reducePerformer) mapKeyFromInput(r job.WorkerJobRequest, data []byte) 
 	}
 }
 
-func (rd *reducePerformer) reduceFunction(r job.WorkerJobRequest) mrutil.ReduceFunc {
+func (rd *reducePerformer) reduceFunction(r job.WorkerJob) mrutil.ReduceFunc {
 	switch r.ReduceFuncName {
 	case ReduceSumFn:
 		return ReduceSum

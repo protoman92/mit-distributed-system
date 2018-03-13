@@ -8,7 +8,7 @@ import (
 
 // SplitFile splits a files into multiple parts, based on the number of chunks
 // specified.
-func SplitFile(filePath string, chunks uint, callback func(uint, []byte)) error {
+func SplitFile(filePath string, chunks uint, callback func(uint, []byte) error) error {
 	file, err := os.Open(filePath)
 
 	if err != nil {
@@ -35,7 +35,10 @@ func SplitFile(filePath string, chunks uint, callback func(uint, []byte)) error 
 		intermediate = strings.Join([]string{intermediate, text}, "\n")
 
 		if intermediateSize >= chunkSize {
-			callback(currentChunk, []byte(intermediate))
+			if err := callback(currentChunk, []byte(intermediate)); err != nil {
+				return err
+			}
+
 			currentChunk++
 			intermediate = ""
 			intermediateSize = 0

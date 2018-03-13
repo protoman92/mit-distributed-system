@@ -20,7 +20,8 @@ func checkParams(params *Params) *Params {
 }
 
 func checkMaster(master *master) {
-	if master.errCh == nil ||
+	if master.completionCh == nil ||
+		master.errCh == nil ||
 		master.delegate == nil ||
 		master.shutdownCh == nil ||
 		master.workers == nil ||

@@ -13,21 +13,21 @@ import (
 type localState struct {
 	*Params
 	mutex  *sync.RWMutex
-	jobs   []job.WorkerJobRequest
+	jobs   []job.WorkerJob
 	status map[string]mrutil.JobStatus
 }
 
-func (s *localState) firstIdleJob() (job.WorkerJobRequest, bool, error) {
+func (s *localState) firstIdleJob() (job.WorkerJob, bool, error) {
 	for ix := range s.jobs {
 		if s.status[s.jobs[ix].UID()] == mrutil.Idle {
 			return s.jobs[ix], true, nil
 		}
 	}
 
-	return job.WorkerJobRequest{}, false, nil
+	return job.WorkerJob{}, false, nil
 }
 
-func (s *localState) FirstIdleJob() (job.WorkerJobRequest, bool, error) {
+func (s *localState) FirstIdleJob() (job.WorkerJob, bool, error) {
 	time.Sleep(s.Latency)
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -58,7 +58,7 @@ func NewLocalState(params Params) masterstate.State {
 	return &localState{
 		Params: &params,
 		mutex:  &sync.RWMutex{},
-		jobs:   make([]job.WorkerJobRequest, 0),
+		jobs:   make([]job.WorkerJob, 0),
 		status: make(map[string]mrutil.JobStatus),
 	}
 }
