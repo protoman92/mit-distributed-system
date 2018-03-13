@@ -14,4 +14,5 @@ type StateJobMap = map[job.WorkerJob]mrutil.JobStatus
 type State interface {
 	FirstIdleJob() (job.WorkerJob, bool, error)
 	UpdateOrAddJobs(jobs StateJobMap) error
+	CheckAllJobsCompleted(jobCount uint) (bool, error)
 }

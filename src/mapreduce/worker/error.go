@@ -8,19 +8,3 @@ type Error struct {
 func (e *Error) Error() string {
 	return e.Original.Error()
 }
-
-func (w *worker) loopError() {
-	for {
-		select {
-		case <-w.shutdownCh:
-			return
-
-		case err := <-w.RPCHandler.ErrorChannel():
-			w.errCh <- &Error{Original: err}
-		}
-	}
-}
-
-func (w *worker) ErrorChannel() <-chan error {
-	return w.errCh
-}

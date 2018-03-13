@@ -36,7 +36,7 @@ func (m *mapPerformer) DoMap(r job.WorkerJob) error {
 	}()
 
 	for i := 0; i < int(r.ReduceOpCount); i++ {
-		fName := mrutil.ReduceFileName(r.File, r.JobNumber, uint(i))
+		fName := mrutil.ReduceFileName(r.File, r.MapJobNumber, uint(i))
 		file, err := os.Create(fName)
 
 		if err != nil {
@@ -48,7 +48,7 @@ func (m *mapPerformer) DoMap(r job.WorkerJob) error {
 		encoders = append(encoders, encoder)
 	}
 
-	fp := mrutil.MapFileName(r.File, r.JobNumber)
+	fp := mrutil.MapFileName(r.File, r.MapJobNumber)
 
 	// Split into R files and write intermediate data.
 	return util.SplitFile(fp, r.ReduceOpCount, func(chunk uint, data []byte) error {

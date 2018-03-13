@@ -34,11 +34,7 @@ func (m *master) shutdown() {
 }
 
 func (m *master) shutdownWorker(workerAddress string) {
-	if err := m.RPCHandler.Shutdown(m.RPCParams.Network, workerAddress); err != nil {
-		go func() {
-			m.errCh <- err
-		}()
-	}
+	m.RPCHandler.Shutdown(m.RPCParams.Network, workerAddress)
 }
 
 func (m *master) loopShutdown() {

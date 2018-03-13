@@ -15,7 +15,7 @@ type WorkerJob struct {
 	ReduceOpCount  uint
 
 	// These properties can be changed.
-	JobNumber      uint
+	MapJobNumber   uint
 	RemoteFileAddr string
 	Type           mrutil.JobType
 	Worker         string
@@ -49,10 +49,12 @@ func (r WorkerJob) Clone() WorkerJob {
 
 // Equals checks equality.
 func (r WorkerJob) Equals(r1 WorkerJob) bool {
-	return r.File == r1.File && r.JobNumber == r1.JobNumber && r.Type == r1.Type
+	return r.File == r1.File &&
+		r.MapJobNumber == r1.MapJobNumber &&
+		r.Type == r1.Type
 }
 
 // UID returns a unique ID for the current job request.
 func (r WorkerJob) UID() string {
-	return fmt.Sprintf("%s-%d-%s", r.Type, r.JobNumber, r.File)
+	return fmt.Sprintf("%s-M%d-%s", r.Type, r.MapJobNumber, r.File)
 }

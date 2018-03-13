@@ -22,8 +22,8 @@ func checkParams(params *Params) *Params {
 }
 
 func checkMaster(master *master) {
-	if master.completionCh == nil ||
-		master.errCh == nil ||
+	if master.allCompletedCh == nil ||
+		master.jobCompleteCh == nil ||
 		master.shutdownCh == nil ||
 		master.workers == nil ||
 		master.workerQueueCh == nil {
@@ -32,9 +32,7 @@ func checkMaster(master *master) {
 }
 
 func checkDelegate(d *MstDelegate) {
-	if d.jobCompleteCh == nil ||
-		d.jobRequestCh == nil ||
-		d.registerWorkerCh == nil {
+	if d.jobCompleteCh == nil || d.registerWorkerCh == nil {
 		panic("Invalid delegate")
 	}
 }

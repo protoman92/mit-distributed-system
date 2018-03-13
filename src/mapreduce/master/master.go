@@ -11,19 +11,18 @@ import (
 type Master interface {
 	// This is just for convenience. A better implementation would be a RPC to
 	// the client notifying it of the completion of a job request.
-	CompletionChannel() <-chan job.WorkerJob
-	ErrorChannel() <-chan error
+	AllCompletedChannel() <-chan interface{}
 	ShutdownChannel() <-chan interface{}
 }
 
 type master struct {
 	*Params
-	mutex         *sync.RWMutex
-	workers       []string
-	completionCh  chan job.WorkerJob
-	shutdownCh    chan interface{}
-	errCh         chan error
-	workerQueueCh chan string
+	mutex          *sync.RWMutex
+	workers        []string
+	allCompletedCh chan interface{}
+	jobCompleteCh  chan job.WorkerJob
+	shutdownCh     chan interface{}
+	workerQueueCh  chan string
 }
 
 // NewMaster returns a new Master.
@@ -33,21 +32,22 @@ func NewMaster(params Params) Master {
 	checkDelegate(delegate)
 
 	master := &master{
-		Params:        checked,
-		mutex:         &sync.RWMutex{},
-		workers:       make([]string, 0),
-		completionCh:  make(chan job.WorkerJob, 0),
-		errCh:         make(chan error, 0),
-		shutdownCh:    make(chan interface{}, 0),
-		workerQueueCh: make(chan string, params.ExpectedWorkerCount),
+		Params:         checked,
+		mutex:          &sync.RWMutex{},
+		workers:        make([]string, 0),
+		allCompletedCh: make(chan interface{}, 0),
+		jobCompleteCh:  make(chan job.WorkerJob, 0),
+		shutdownCh:     make(chan interface{}, 0),
+		workerQueueCh:  make(chan string, params.ExpectedWorkerCount),
 	}
 
 	checkMaster(master)
-	go master.loopError()
+	go master.loopAllCompletion()
 	go master.loopJobAssignment()
-	go master.loopJobCompletion()
-	go master.loopJobReceipt()
+	go master.loopJobComplete()
+	go master.loopJobCompleteNotification()
 	go master.loopRegister()
 	go master.loopShutdown()
+	go master.updateWorkerJobs()
 	return master
 }

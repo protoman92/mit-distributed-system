@@ -14,6 +14,7 @@ type Params struct {
 	Delegate              *MstDelegate
 	ExpectedWorkerCount   uint
 	LogMan                util.LogMan
+	JobRequest            job.MasterJob
 	PingPeriod            time.Duration
 	RetryDuration         time.Duration
 	RPCParams             rpchandler.Params
@@ -21,13 +22,4 @@ type Params struct {
 	State                 masterstate.State
 	WorkerAcceptJobMethod string
 	WorkerPingMethod      string
-}
-
-// JobReply represents the reply to a job request RPC invocation.
-type JobReply struct{}
-
-// JobCallResult represents the result of a job request transmission.
-type JobCallResult struct {
-	request job.MasterJob
-	errCh   chan error
 }

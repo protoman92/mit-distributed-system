@@ -1,8 +1,6 @@
 package job
 
 import (
-	"fmt"
-
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 )
 
@@ -24,9 +22,13 @@ func CheckMasterJob(r MasterJob) {
 		r.ReduceFuncName == "" ||
 		r.ReduceOpCount == 0 ||
 		r.Type == 0 {
-		fmt.Println(r)
 		panic("Invalid parameters")
 	}
+}
+
+// JobCount returns a total number of jobs.
+func (r MasterJob) JobCount() uint {
+	return uint(len(r.FilePaths)) * r.MapOpCount
 }
 
 // MapJobs creates Map jobs.
@@ -39,7 +41,7 @@ func (r MasterJob) MapJobs() []WorkerJob {
 		for jx := 0; jx < int(r.MapOpCount); jx++ {
 			request := WorkerJob{
 				File:           path,
-				JobNumber:      uint(jx),
+				MapJobNumber:   uint(jx),
 				MapOpCount:     r.MapOpCount,
 				MapFuncName:    r.MapFuncName,
 				ReduceFuncName: r.ReduceFuncName,

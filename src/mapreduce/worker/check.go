@@ -25,7 +25,6 @@ func checkParams(params *Params) *Params {
 
 func checkWorker(worker *worker) {
 	if worker.capacityCh == nil ||
-		worker.errCh == nil ||
 		worker.jobQueueCh == nil ||
 		worker.shutdownCh == nil {
 		panic("Invalid setup")

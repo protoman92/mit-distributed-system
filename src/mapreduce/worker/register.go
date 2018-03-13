@@ -15,7 +15,10 @@ func (w *worker) loopRegister() {
 			// Take a look at the code for job request loop for the other side of this
 			// channel.
 			w.capacityCh <- true
-			w.RPCParams.RetryWithDelay(w.registerWithMaster)()
+
+			if err := w.RPCParams.RetryWithDelay(w.registerWithMaster)(); err != nil {
+				<-w.capacityCh
+			}
 		}
 	}
 }

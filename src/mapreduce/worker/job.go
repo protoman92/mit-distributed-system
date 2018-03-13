@@ -51,14 +51,10 @@ func (w *worker) loopJobRequest() {
 			go func() {
 				handleJobRequest := func() error { return w.handleJobRequest(request) }
 
-				if err := w.RPCParams.RetryWithDelay(handleJobRequest)(); err != nil {
-					w.errCh <- err
-				} else {
+				if err := w.RPCParams.RetryWithDelay(handleJobRequest)(); err == nil {
 					completeJob := func() error { return w.completeJobRequest(request) }
 
-					if err1 := w.RPCParams.RetryWithDelay(completeJob)(); err1 != nil {
-						w.errCh <- err1
-					} else {
+					if err1 := w.RPCParams.RetryWithDelay(completeJob)(); err1 == nil {
 						w.LogMan.Printf("%v: completed request %v.\n", w, request)
 					}
 				}

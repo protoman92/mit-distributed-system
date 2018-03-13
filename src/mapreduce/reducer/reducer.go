@@ -31,7 +31,7 @@ func (rd *reducePerformer) DoReduce(r job.WorkerJob) error {
 	reduceErrCh := make(chan error, 0)
 	waitGroup := sync.WaitGroup{}
 
-	mergeFP := mrutil.MergeFileName(r.File, r.JobNumber)
+	mergeFP := mrutil.MergeFileName(r.File, r.MapJobNumber)
 	mergeFile, err := os.Create(mergeFP)
 
 	if err != nil {
@@ -41,10 +41,8 @@ func (rd *reducePerformer) DoReduce(r job.WorkerJob) error {
 	defer mergeFile.Close()
 	encoder := json.NewEncoder(mergeFile)
 
-	// Search for M files. These files may be on different localities, so the
-	// worst case scenario is that this worker has to make M network calls.
-	for i := 0; i < int(r.MapOpCount); i++ {
-		mapNo := uint(i)
+	for i := 0; i < int(r.ReduceOpCount); i++ {
+		reduceNo := uint(i)
 		waitGroup.Add(1)
 
 		go func() {
@@ -74,7 +72,7 @@ func (rd *reducePerformer) DoReduce(r job.WorkerJob) error {
 
 			accessParams := fileaccess.AccessParams{
 				Address: r.RemoteFileAddr,
-				File:    mrutil.ReduceFileName(r.File, mapNo, r.JobNumber),
+				File:    mrutil.ReduceFileName(r.File, r.MapJobNumber, reduceNo),
 			}
 
 			if err := rd.FileAccessor.AccessFile(accessParams, cb); err != nil {

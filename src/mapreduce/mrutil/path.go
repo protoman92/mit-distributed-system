@@ -21,8 +21,15 @@ func ReduceFileName(fp string, mapNo uint, reduceNo uint) string {
 }
 
 // MergeFileName creates a file name for a Merge operation.
-func MergeFileName(fp string, reduceNo uint) string {
+func MergeFileName(fp string, mapNo uint) string {
 	dir, file := path.Split(fp)
-	newName := fmt.Sprintf("result-%d-%s", reduceNo, file)
+	newName := fmt.Sprintf("result-%d-%s", mapNo, file)
 	return path.Join(dir, newName)
+}
+
+// SplitFileName creates a file name for a Split operation.
+func SplitFileName(fp string, chunk uint) string {
+	dir, name := path.Split(fp)
+	splitFP := fmt.Sprintf("%d-%s", chunk, name)
+	return path.Join(dir, splitFP)
 }

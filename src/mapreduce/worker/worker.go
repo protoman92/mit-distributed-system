@@ -5,14 +5,11 @@ import (
 )
 
 // Worker represents a MapReduce worker.
-type Worker interface {
-	ErrorChannel() <-chan error
-}
+type Worker interface{}
 
 type worker struct {
 	*Params
 	capacityCh chan interface{}
-	errCh      chan error
 	jobQueueCh chan job.WorkerJob
 	shutdownCh chan interface{}
 }
@@ -24,13 +21,11 @@ func NewWorker(params Params) Worker {
 	w := &worker{
 		Params:     checked,
 		capacityCh: make(chan interface{}, params.JobCapacity),
-		errCh:      make(chan error, 0),
 		jobQueueCh: make(chan job.WorkerJob),
 		shutdownCh: make(chan interface{}, 0),
 	}
 
 	checkWorker(w)
-	go w.loopError()
 	go w.loopFileAccess()
 	go w.loopJobReceipt()
 	go w.loopJobRequest()
