@@ -11,11 +11,13 @@ import (
 
 // Params represents the required parameters to build a Master.
 type Params struct {
-	RPCParams             rpchandler.Params
+	Delegate              *MstDelegate
 	ExpectedWorkerCount   uint
 	LogMan                util.LogMan
 	PingPeriod            time.Duration
 	RetryDuration         time.Duration
+	RPCParams             rpchandler.Params
+	RPCHandler            rpchandler.Handler
 	State                 masterstate.State
 	WorkerAcceptJobMethod string
 	WorkerPingMethod      string

@@ -7,6 +7,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/protoman92/mit-distributed-system/src/mapreduce/fileaccess"
+
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/job"
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/mrutil"
 )
@@ -46,9 +48,7 @@ func (rd *reducePerformer) DoReduce(r job.WorkerJob) error {
 		waitGroup.Add(1)
 
 		go func() {
-			inputPath := mrutil.ReduceFileName(r.File, mapNo, r.JobNumber)
-
-			if err := rd.FileAccessor.AccessFile(inputPath, func(data []byte) error {
+			cb := func(data []byte) error {
 				kvm, err := rd.mapKeyFromInput(r, data)
 
 				if err != nil && err != io.EOF {
@@ -70,7 +70,14 @@ func (rd *reducePerformer) DoReduce(r job.WorkerJob) error {
 				}
 
 				return nil
-			}); err != nil {
+			}
+
+			accessParams := fileaccess.AccessParams{
+				Address: r.RemoteFileAddr,
+				File:    mrutil.ReduceFileName(r.File, mapNo, r.JobNumber),
+			}
+
+			if err := rd.FileAccessor.AccessFile(accessParams, cb); err != nil {
 				reduceErrCh <- err
 			} else {
 				waitGroup.Done()

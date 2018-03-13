@@ -33,7 +33,7 @@ func (m *master) loopJobReceipt() {
 		case <-m.shutdownCh:
 			return
 
-		case result := <-m.delegate.jobRequestCh:
+		case result := <-m.Delegate.jobRequestCh:
 			m.LogMan.Printf("%v: received job %v\n", m, result.request)
 			requests := result.request.MapJobs()
 			update := make(masterstate.StateJobMap, 0)
@@ -64,7 +64,6 @@ func (m *master) loopJobAssignment() {
 			return
 
 		case w = <-workerQueueCh:
-			m.LogMan.Printf("%v: worker %s is ready to work.\n", m, w)
 			workerQueueCh = nil
 			var job job.WorkerJob
 			var found bool
@@ -87,8 +86,11 @@ func (m *master) loopJobAssignment() {
 				break
 			}
 
+			cloned := job.Clone()
+			cloned.Worker = w
+
 			assignWork := func() error {
-				return m.assignWork(w, job)
+				return m.assignWork(w, cloned)
 			}
 
 			// If the master is unable to assign work to this worker (due to worker
@@ -98,9 +100,6 @@ func (m *master) loopJobAssignment() {
 				workerRequeueCh = m.workerQueueCh
 				break
 			}
-
-			cloned := job.Clone()
-			cloned.Worker = w
 
 			updateJob := func() error {
 				update := masterstate.StateJobMap{cloned: mrutil.InProgress}
@@ -134,7 +133,7 @@ func (m *master) loopJobCompletion() {
 		case <-m.shutdownCh:
 			return
 
-		case result := <-m.delegate.jobCompleteCh:
+		case result := <-m.Delegate.jobCompleteCh:
 			handleCompletion := func() error {
 				return m.handleJobCompletion(result.Request)
 			}
@@ -163,7 +162,7 @@ func (m *master) assignWork(w string, job job.WorkerJob) error {
 		Target:  w,
 	}
 
-	return m.rpcHandler.Call(callParams)
+	return m.RPCHandler.Call(callParams)
 }
 
 func (m *master) handleJobCompletion(r job.WorkerJob) error {
@@ -176,6 +175,7 @@ func (m *master) handleJobCompletion(r job.WorkerJob) error {
 			reduceR := r.Clone()
 			reduceR.JobNumber = uint(i)
 			reduceR.Type = mrutil.Reduce
+			reduceR.RemoteFileAddr = r.Worker
 			reduceR.Worker = mrutil.UnassignedWorker
 			update[reduceR] = mrutil.Idle
 		}

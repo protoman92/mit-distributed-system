@@ -18,7 +18,7 @@ func (m *master) loopRegister() {
 		case <-m.shutdownCh:
 			return
 
-		case result := <-m.delegate.registerWorkerCh:
+		case result := <-m.Delegate.registerWorkerCh:
 			// This is in a goroutine because the worker queue loop waits for idle
 			// jobs one-by-one before accepting new workers.
 			go func() {
@@ -45,7 +45,6 @@ func (m *master) registerWorker(w string) {
 	m.mutex.RUnlock()
 
 	if !existing {
-		m.LogMan.Printf("%v: adding new worker %s\n", m, w)
 		go m.loopPing(w)
 		m.mutex.Lock()
 		defer m.mutex.Unlock()

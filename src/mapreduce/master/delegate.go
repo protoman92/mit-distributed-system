@@ -12,10 +12,14 @@ type MstDelegate struct {
 	registerWorkerCh chan worker.RegisterCallResult
 }
 
-func newDelegate() *MstDelegate {
-	return &MstDelegate{
+// NewDelegate returns a new MstDelegate.
+func NewDelegate() *MstDelegate {
+	delegate := &MstDelegate{
 		jobCompleteCh:    make(chan worker.JobCallResult, 0),
 		jobRequestCh:     make(chan JobCallResult, 0),
 		registerWorkerCh: make(chan worker.RegisterCallResult, 0),
 	}
+
+	checkDelegate(delegate)
+	return delegate
 }

@@ -38,15 +38,15 @@ func (r MasterJob) MapJobs() []WorkerJob {
 
 		for jx := 0; jx < int(r.MapOpCount); jx++ {
 			request := WorkerJob{
-				File:              path,
-				JobNumber:         uint(jx),
-				MapOpCount:        r.MapOpCount,
-				MapFuncName:       r.MapFuncName,
-				ReduceFuncName:    r.ReduceFuncName,
-				ReduceOpCount:     r.ReduceOpCount,
-				RemoteFileAddress: mrutil.UnassignedWorker,
-				Type:              r.Type,
-				Worker:            mrutil.UnassignedWorker,
+				File:           path,
+				JobNumber:      uint(jx),
+				MapOpCount:     r.MapOpCount,
+				MapFuncName:    r.MapFuncName,
+				ReduceFuncName: r.ReduceFuncName,
+				ReduceOpCount:  r.ReduceOpCount,
+				RemoteFileAddr: mrutil.UnassignedWorker,
+				Type:           r.Type,
+				Worker:         mrutil.UnassignedWorker,
 			}
 
 			requests = append(requests, request)

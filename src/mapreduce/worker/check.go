@@ -5,12 +5,14 @@ import (
 )
 
 func checkParams(params *Params) *Params {
-	if params.JobCapacity == 0 ||
+	if params.Delegate == nil ||
+		params.JobCapacity == 0 ||
 		params.Mapper == nil ||
 		params.MasterAddress == "" ||
 		params.MasterCompleteJobMethod == "" ||
 		params.MasterRegisterMethod == "" ||
-		params.Reducer == nil {
+		params.Reducer == nil ||
+		params.RPCHandler == nil {
 		panic("Invalid parameters")
 	}
 
@@ -31,7 +33,7 @@ func checkWorker(worker *worker) {
 }
 
 func checkDelegate(delegate *WkDelegate) {
-	if delegate.jobCh == nil {
+	if delegate.accessFileCh == nil || delegate.jobCh == nil {
 		panic("Invalid setup")
 	}
 }

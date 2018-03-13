@@ -15,7 +15,7 @@ func (m *master) loopError() {
 		case <-m.shutdownCh:
 			return
 
-		case err := <-m.rpcHandler.ErrorChannel():
+		case err := <-m.RPCHandler.ErrorChannel():
 			m.errCh <- &Error{Original: err}
 		}
 	}

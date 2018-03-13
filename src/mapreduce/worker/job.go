@@ -24,7 +24,7 @@ func (w *worker) loopJobReceipt() {
 		case <-w.shutdownCh:
 			return
 
-		case result := <-w.delegate.jobCh:
+		case result := <-w.Delegate.jobCh:
 			w.LogMan.Printf("%v: received job request %v\n", w, result.Request)
 
 			// For a Map operation, the file must be available locally.
@@ -48,7 +48,6 @@ func (w *worker) loopJobRequest() {
 			return
 
 		case request := <-w.jobQueueCh:
-			fmt.Println(w, request.JobNumber, request.Type)
 			go func() {
 				handleJobRequest := func() error { return w.handleJobRequest(request) }
 
@@ -86,7 +85,7 @@ func (w *worker) handleJobRequest(r job.WorkerJob) error {
 
 func (w *worker) completeJobRequest(r job.WorkerJob) error {
 	cloned := r.Clone()
-	r.RemoteFileAddress = w.RPCParams.Address
+	cloned.RemoteFileAddr = w.RPCParams.Address
 	reply := &JobReply{}
 
 	callParams := rpcutil.CallParams{
@@ -97,5 +96,5 @@ func (w *worker) completeJobRequest(r job.WorkerJob) error {
 		Target:  w.MasterAddress,
 	}
 
-	return w.rpcHandler.Call(callParams)
+	return w.RPCHandler.Call(callParams)
 }

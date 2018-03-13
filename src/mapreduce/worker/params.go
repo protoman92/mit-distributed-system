@@ -11,6 +11,7 @@ import (
 // Params represents the required parameters to build a Worker.
 type Params struct {
 	RPCParams               rpchandler.Params
+	Delegate                *WkDelegate
 	LogMan                  util.LogMan
 	JobCapacity             uint
 	Mapper                  mapper.Mapper
@@ -18,6 +19,7 @@ type Params struct {
 	MasterCompleteJobMethod string
 	MasterRegisterMethod    string
 	Reducer                 reducer.Reducer
+	RPCHandler              rpchandler.Handler
 }
 
 // JobReply represents a reply to a job request.

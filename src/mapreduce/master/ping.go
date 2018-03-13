@@ -20,7 +20,7 @@ func (m *master) loopPing(w string) {
 }
 
 func (m *master) ping(w string) {
-	m.LogMan.Printf("%v: pinging worker %s\n", m, w)
+	// m.LogMan.Printf("%v: pinging worker %s\n", m, w)
 	args := &worker.PingRequest{}
 	reply := &worker.PingReply{}
 
@@ -32,9 +32,7 @@ func (m *master) ping(w string) {
 		Target:  w,
 	}
 
-	if err := m.rpcHandler.Call(callParams); err != nil || !reply.OK {
+	if err := m.RPCHandler.Call(callParams); err != nil || !reply.OK {
 		m.LogMan.Printf("%v: worker %s timed out (error %v)\n", m, w, err)
-	} else {
-		m.LogMan.Printf("%v: received response from worker %s\n", m, w)
 	}
 }

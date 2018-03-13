@@ -34,7 +34,7 @@ func (m *master) shutdown() {
 }
 
 func (m *master) shutdownWorker(workerAddress string) {
-	if err := m.rpcHandler.Shutdown(m.RPCParams.Network, workerAddress); err != nil {
+	if err := m.RPCHandler.Shutdown(m.RPCParams.Network, workerAddress); err != nil {
 		go func() {
 			m.errCh <- err
 		}()
@@ -44,7 +44,7 @@ func (m *master) shutdownWorker(workerAddress string) {
 func (m *master) loopShutdown() {
 	for {
 		select {
-		case <-m.rpcHandler.ShutdownChannel():
+		case <-m.RPCHandler.ShutdownChannel():
 			m.LogMan.Printf("%v: received shutdown request.\n", m)
 			m.shutdown()
 			return

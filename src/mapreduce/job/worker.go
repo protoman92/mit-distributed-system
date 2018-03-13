@@ -15,10 +15,10 @@ type WorkerJob struct {
 	ReduceOpCount  uint
 
 	// These properties can be changed.
-	JobNumber         uint
-	RemoteFileAddress string
-	Type              mrutil.JobType
-	Worker            string
+	JobNumber      uint
+	RemoteFileAddr string
+	Type           mrutil.JobType
+	Worker         string
 }
 
 // CheckWorkerJob checks the validity of a JobRequest.
@@ -28,10 +28,17 @@ func CheckWorkerJob(r WorkerJob) {
 		r.MapOpCount == 0 ||
 		r.ReduceFuncName == "" ||
 		r.ReduceOpCount == 0 ||
-		r.RemoteFileAddress == "" ||
+		r.RemoteFileAddr == "" ||
 		r.Type == mrutil.JobType(0) ||
-		r.Worker == "" {
+		r.Worker == "" ||
+		r.Worker == mrutil.UnassignedWorker {
 		panic("Invalid parameters")
+	}
+
+	if r.Type == mrutil.Reduce {
+		if r.RemoteFileAddr == mrutil.UnassignedWorker {
+			panic("Invalid parameters")
+		}
 	}
 }
 

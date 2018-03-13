@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/job"
-	"github.com/protoman92/mit-distributed-system/src/rpcutil/rpchandler"
 )
 
 // Master represents a master that receives job requests from some client and
@@ -19,9 +18,7 @@ type Master interface {
 
 type master struct {
 	*Params
-	delegate      *MstDelegate
 	mutex         *sync.RWMutex
-	rpcHandler    rpchandler.Handler
 	workers       []string
 	completionCh  chan job.WorkerJob
 	shutdownCh    chan interface{}
@@ -32,14 +29,12 @@ type master struct {
 // NewMaster returns a new Master.
 func NewMaster(params Params) Master {
 	checked := checkParams(&params)
-	delegate := newDelegate()
+	delegate := NewDelegate()
 	checkDelegate(delegate)
 
 	master := &master{
 		Params:        checked,
-		delegate:      delegate,
 		mutex:         &sync.RWMutex{},
-		rpcHandler:    rpchandler.NewHandler(checked.RPCParams, delegate),
 		workers:       make([]string, 0),
 		completionCh:  make(chan job.WorkerJob, 0),
 		errCh:         make(chan error, 0),

@@ -15,7 +15,7 @@ func (w *worker) loopError() {
 		case <-w.shutdownCh:
 			return
 
-		case err := <-w.rpcHandler.ErrorChannel():
+		case err := <-w.RPCHandler.ErrorChannel():
 			w.errCh <- &Error{Original: err}
 		}
 	}

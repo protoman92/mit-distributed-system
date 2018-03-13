@@ -2,7 +2,6 @@ package worker
 
 import (
 	"github.com/protoman92/mit-distributed-system/src/mapreduce/job"
-	"github.com/protoman92/mit-distributed-system/src/rpcutil/rpchandler"
 )
 
 // Worker represents a MapReduce worker.
@@ -12,8 +11,6 @@ type Worker interface {
 
 type worker struct {
 	*Params
-	delegate   *WkDelegate
-	rpcHandler rpchandler.Handler
 	capacityCh chan interface{}
 	errCh      chan error
 	jobQueueCh chan job.WorkerJob
@@ -23,13 +20,9 @@ type worker struct {
 // NewWorker returns a new Worker.
 func NewWorker(params Params) Worker {
 	checked := checkParams(&params)
-	delegate := newDelegate()
-	checkDelegate(delegate)
 
 	w := &worker{
 		Params:     checked,
-		delegate:   delegate,
-		rpcHandler: rpchandler.NewHandler(checked.RPCParams, delegate),
 		capacityCh: make(chan interface{}, params.JobCapacity),
 		errCh:      make(chan error, 0),
 		jobQueueCh: make(chan job.WorkerJob),
@@ -38,6 +31,7 @@ func NewWorker(params Params) Worker {
 
 	checkWorker(w)
 	go w.loopError()
+	go w.loopFileAccess()
 	go w.loopJobReceipt()
 	go w.loopJobRequest()
 	go w.loopRegister()

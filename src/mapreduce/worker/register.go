@@ -32,5 +32,5 @@ func (w *worker) registerWithMaster() error {
 		Target:  w.MasterAddress,
 	}
 
-	return w.rpcHandler.Call(callParams)
+	return w.RPCHandler.Call(callParams)
 }

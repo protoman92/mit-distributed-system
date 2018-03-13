@@ -22,7 +22,7 @@ func (w *worker) shutdown() {
 func (w *worker) loopShutdown() {
 	for {
 		select {
-		case <-w.rpcHandler.ShutdownChannel():
+		case <-w.RPCHandler.ShutdownChannel():
 			w.LogMan.Printf("%v: received shutdown request.\n", w)
 			w.shutdown()
 			return
